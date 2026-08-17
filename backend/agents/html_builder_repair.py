@@ -10,7 +10,6 @@ Handles deterministic repairs for Builder renderer output:
 - Media narrative sections
 """
 
-from __future__ import annotations
 
 import html as _html
 import json

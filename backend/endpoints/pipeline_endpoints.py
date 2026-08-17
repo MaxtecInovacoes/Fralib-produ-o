@@ -14,6 +14,7 @@ from backend.endpoints.auth_endpoints import get_current_user
 from backend.utils.agente1_hunter_v2 import buscar_leads_google_maps
 from backend.endpoints.sse_endpoints import adicionar_log
 from backend.whatsapp_listener import is_tenant_connected
+from backend.schemas.pipeline_trigger import PipelineTriggerRequest
 
 import logging as _logging
 
@@ -174,7 +175,7 @@ def emitir_erro_pipeline(tenant_id, error_code, message="", detalhes=None, **kwa
     adicionar_log(_json_err.dumps(payload), "PIPELINE_STATUS", user_id=tenant_id)
 
 @router.get('/cooldown-status')
-async def cooldown_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def cooldown_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Status completo de cooldown, créditos e fila para dashboard."""
     tenant_id = usuario.get("tenant_id", usuario["id"])
     from services.credits_manager import validar_permissao_pipeline, get_user_tokens, LIMITES_DIARIOS, COOLDOWNS
@@ -374,7 +375,6 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         _lead_id_existente = config.get("_lead_id_existente")
         if _lead_id_existente:
             _log("REPROCESSAMENTO — pulando Hunter + Caio", "info")
-            from utils.agente1_hunter_v2 import LeadRaw, LeadQualificado
             from agents.caio import CaioOutput
             import json as _json_reproc
             with engine.connect() as _conn_reproc:
@@ -456,7 +456,6 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
             # Reprocessamento: usar _executar_pipeline_a_partir_fase2 (mesmos agentes)
             if not getattr(state, 'keyword_research', ''):
                 try:
-                    from agents.keyword_research import pesquisar_keywords_nicho
                     state.keyword_research = pesquisar_keywords_nicho(state.segmento, state.lead_obj.lead.cidade)
                 except: state.keyword_research = ""
             await _executar_pipeline_a_partir_fase2(state, tenant_id, config)
@@ -713,7 +712,6 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
                     state.lead_id = str(_id_existente[0]) if _id_existente else str(uuid.uuid4())
                     _log(f"  Redirecionando para: {state.lead_nome}", "info")
                     print(f"[Pipeline] Redirecionando para proximo lead: {state.lead_nome} (id={state.lead_id})")
-            import json as _json
             _dados_extras = {
                 "horarios": getattr(state.lead_obj.lead, "horarios", []) or [],
                 "maps_url": getattr(state.lead_obj.lead, "maps_url", None) or "",
@@ -1119,7 +1117,6 @@ async def executar_pipeline_completo(config: dict, tenant_id: int, queue_id: int
         print(f"[Pipeline] Maps embed injetado no PRD: {len(state.prd_arquiteto.google_maps_embed)} chars")
         # Salvar PRD no trace para auditoria
         try:
-            import json as _json
             _trace_dir = f"{_BASE_DIR}/logs/pipeline_trace"
             _os.makedirs(_trace_dir, exist_ok=True)
             with open(f"{_trace_dir}/designer_prd.json", "w", encoding="utf-8") as _pf:
@@ -1689,7 +1686,7 @@ IMPORTANTE: Corrija EXATAMENTE os problemas acima. Não altere o que já estava 
 
 
 @router.get('/ciclos')
-async def get_ciclos(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_ciclos(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id_c = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text("""
@@ -1778,15 +1775,12 @@ async def executar_pipeline_multiplos(config: dict, tenant_id: int, queue_id: in
         _log("Nenhum lead qualificado para " + segmento + " em " + cidade + ". Tente outro nicho ou uma cidade maior.", "error")
 
 @router.post('/iniciar')
-async def iniciar_pipeline(
-    request: Request,
+def iniciar_pipeline(
+    body: PipelineTriggerRequest,
     db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)
 ):
-    try:
-        config = await request.json()
-        logger.info(f"[Pipeline] Dados recebidos: {config}")
-    except Exception:
-        config = {}
+    config = body.model_dump()
+    logger.info(f"[Pipeline] Dados recebidos: {config}")
     tenant_id = usuario.get("tenant_id", usuario["id"])
 
     # Limites de quantidade por plano (server-side, não confia no frontend)
@@ -1988,7 +1982,7 @@ async def get_fila_status(usuario: dict = Depends(get_current_user)):
 
 
 @router.get('/status')
-async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     state = get_pipeline_state(db, tenant_id)
 
@@ -2085,7 +2079,7 @@ async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_
 
 
 @router.get('/timeline')
-async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Esteira operacional do tenant baseada na fila canônica `jobs`."""
     tenant_id = usuario.get("tenant_id", usuario["id"])
     jobs = db.execute(text("""
@@ -2165,14 +2159,14 @@ async def get_pipeline_timeline(db: Session = Depends(get_db), usuario: dict = D
 
 
 @router.post('/parar')
-async def parar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def parar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     update_pipeline_state(db, tenant_id, rodando=False, pausado=False)
     return {"status": "parado"}
 
 
 @router.post('/reset')
-async def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     update_pipeline_state(db, tenant_id, rodando=False, pausado=False)
     logger.info(f"[Pipeline] Reset forcado para tenant {tenant_id}")
@@ -2181,7 +2175,7 @@ async def reset_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(
 
 
 @router.post('/cancelar')
-async def cancelar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def cancelar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     result = db.execute(text("""
         UPDATE jobs SET status = 'failed_permanent'
@@ -2195,21 +2189,21 @@ async def cancelar_pipeline(db: Session = Depends(get_db), usuario: dict = Depen
 
 
 @router.post('/pausar')
-async def pausar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def pausar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     update_pipeline_state(db, tenant_id, pausado=True)
     adicionar_log("Pipeline pausado pelo usuario", "warning", user_id=tenant_id)
     return {"status": "pausado"}
 
 @router.post('/retomar')
-async def retomar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def retomar_pipeline(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     update_pipeline_state(db, tenant_id, pausado=False)
     adicionar_log("Pipeline retomado pelo usuario", "info", user_id=tenant_id)
     return {"status": "retomado"}
 
 @router.post('/arquivar-tudo')
-async def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     try:
         result = db.execute(text(
@@ -2374,7 +2368,6 @@ async def executar_pipeline_lead_existente(lead_id: str, tenant_id: int, forcar_
 async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
     """Executa o pipeline a partir da FASE 2 com state já populado."""
     import asyncio, hashlib, random
-    from concurrent.futures import ThreadPoolExecutor
     from agents.caio import qualificar_lead, LeadInput as CaioInput
 
     _log = lambda msg, tipo="info": adicionar_log(msg, tipo, user_id=tenant_id)
@@ -2389,7 +2382,6 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         # Keyword research — usa cache 30 dias, não bloqueia se falhar
         if not state.keyword_research:
             try:
-                from agents.keyword_research import pesquisar_keywords_nicho
                 state.keyword_research = pesquisar_keywords_nicho(
                     state.lead_obj.lead.segmento, state.lead_obj.lead.cidade
                 )
@@ -2399,7 +2391,6 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 
         # Caio: pular se já qualificado (reprocessamento)
         if not state.qualificacao_caio:
-            from agents.caio import CaioOutput
             state.qualificacao_caio = CaioOutput(
                 qualificado=True,
                 qualificacao="QUENTE",
@@ -2431,7 +2422,6 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             state.lead_raw_data["reviews"] = sorted(reviews_raw, key=lambda r: len(str(r.get("texto", r.get("text", "")))), reverse=True)[:5]
         if len(state.jina_insights) > 5000:
             state.jina_insights = state.jina_insights[:5000]
-        import urllib.parse as _urlparse
         _osm_query = _urlparse.quote(state.lead_nome + ", " + state.lead_obj.lead.cidade)
         state.lead_raw_data["google_maps_embed"] = f'<iframe width="100%" height="450" style="border:0;" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=-60,-35,-30,-5&layer=mapnik&query={_osm_query}"></iframe>'
 
@@ -2504,11 +2494,9 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
             if assets_src == assets_dst:
                 print(f"[Pipeline] Assets já no lugar: {assets_dst}")
             elif os.path.exists(assets_src):
-                import shutil
                 if os.path.exists(assets_dst):
                     shutil.rmtree(assets_dst)
                 shutil.copytree(assets_src, assets_dst)
-        import subprocess as _sp
         _sp.run(["chown", "-R", "www-data:www-data", web_dir], check=False)
         _sp.run(["chmod", "-R", "755", web_dir], check=False)
         state.site_url = f"https://seunegociofralib.site/sites/{tenant_id}/{state.lead_slug}/"
@@ -2553,7 +2541,6 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
         logger.info(f"[Pipeline] Reprocessar concluído: {state.site_url}")
 
     except Exception as e:
-        import traceback
         logger.error(f"[Pipeline] Reprocessar erro: {e}")
         logger.error(traceback.format_exc())
         with engine.connect() as conn:
@@ -2569,7 +2556,7 @@ async def _executar_pipeline_a_partir_fase2(state, tenant_id, config):
 
 
 @router.post('/reprocessar/{lead_id}')
-async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user), forcar_renovacao: bool = False):
+def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user), forcar_renovacao: bool = False):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     # Gate duplo: créditos + cooldown
     _perm = validar_permissao_pipeline(db, tenant_id)
@@ -2585,7 +2572,6 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     _renovacao_label = " (renovacao forcada)" if forcar_renovacao else ""
     adicionar_log(f"Lead {lead.nome} reprocessando{_renovacao_label}...", "info", user_id=tenant_id)
     # Enfileirar como job normal no worker — usa pipeline principal com flag pra pular Hunter+Caio
-    import job_queue as _jq
     config_reproc = {
         "segmento": lead.segmento or "",
         "cidade": lead.cidade or "",
@@ -2609,7 +2595,7 @@ async def reprocessar_lead(lead_id: str, background_tasks: BackgroundTasks, db: 
     return {"ok": True, "mensagem": "Lead marcado para reprocessamento"}
 
 @router.get('/fila-reprocessamento')
-async def fila_reprocessamento(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def fila_reprocessamento(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     tenant_id = usuario.get("tenant_id", usuario["id"])
     leads = db.execute(text(
         "SELECT id, nome, cidade, segmento, rating, score, tier FROM leads WHERE user_id=:uid AND status='capturado' ORDER BY criado_em DESC"
@@ -2617,8 +2603,7 @@ async def fila_reprocessamento(db: Session = Depends(get_db), usuario: dict = De
     return {"leads": [dict(r._mapping) for r in leads], "total": len(leads)}
 
 @router.get('/analytics/overview')
-async def get_analytics(periodo: str = 'mes', db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
-    from datetime import datetime, timedelta
+def get_analytics(periodo: str = 'mes', db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
 
     agora = datetime.now()
     if periodo == 'hoje':
@@ -2685,7 +2670,7 @@ async def get_analytics(periodo: str = 'mes', db: Session = Depends(get_db), usu
 
 
 @router.get('/stats')
-async def get_stats(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_stats(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         uid = usuario.get("tenant_id", usuario["id"])
         total_com_site = db.execute(text("SELECT COUNT(*) FROM leads WHERE user_id=:uid AND url_site IS NOT NULL AND url_site != ''"), {"uid": uid}).scalar() or 0

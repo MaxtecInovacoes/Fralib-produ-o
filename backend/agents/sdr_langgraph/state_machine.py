@@ -10,7 +10,6 @@ Arquitetura nova (substitui stage-driven loop por conversation state + intent):
 Regra de ouro: o sistema decide transicao com base em (state, intent), nunca em stage sozinho.
 """
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum

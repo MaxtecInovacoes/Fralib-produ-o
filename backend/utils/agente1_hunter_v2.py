@@ -355,7 +355,6 @@ def _buscar_cache_leads(segmento: str, cidade: str, existentes: set, limite: int
         if not rows:
             return []
 
-        import json as _json_cache
         leads = []
         for r in rows:
             nome = r[0] or ''
@@ -464,8 +463,6 @@ def _buscar_leads_prontos_usuario(user_id: Optional[int], segmento: str, cidade:
     if not user_id:
         return []
     try:
-        from database import engine
-        from sqlalchemy import text as _text
 
         with engine.connect() as conn:
             rows = conn.execute(_text("""
@@ -531,9 +528,6 @@ def _prioridade_captura(item: 'LeadQualificado') -> tuple:
 def _salvar_cache_leads(leads: List['LeadQualificado'], segmento: str, cidade: str, user_id: int = 0):
     """Salva leads no cache ISOLADO POR USER_ID para evitar envenenamento entre tenants."""
     try:
-        from database import engine
-        from sqlalchemy import text as _text
-        import json as _json_cache
         with engine.connect() as conn:
             for lq in leads:
                 l = lq.lead

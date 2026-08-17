@@ -6,7 +6,6 @@ antes de entregar o PRD. Garante que keywords, design tokens, animações,
 SEO e open design sejam SEMPRE utilizados.
 """
 import json
-import os
 import urllib.request
 import urllib.parse
 

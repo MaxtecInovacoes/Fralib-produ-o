@@ -264,7 +264,7 @@ def _close_broken_inline_wrappers_before_sections(html: str) -> str:
 
 
 def _demote_secondary_tag(html: str, original_tag: str, replacement_tag: str) -> str:
-    tag_re = re.compile(rf"<(/?){original_tag}\b([^>]*)>", re.IGNORECASE)
+    tag_re = re.compile(f"<(/?){re.escape(original_tag)}\\b([^>]*)>", re.IGNORECASE)
     open_seen = 0
     close_budget = 0
 
@@ -440,8 +440,8 @@ def _ensure_final_document_contract(html: str, state: PipelineState, canonical_u
         cleaned = re.sub(r"\(\d{2}\)\s*99999-9999", visible_phone, cleaned)
         cleaned = re.sub(r"https://wa\.me/\d{10,15}", f"https://wa.me/{digits}", cleaned)
         cleaned = re.sub(r'href="tel:[^"]+"', f'href="tel:+{digits}"', cleaned)
-        cleaned = re.sub(r'("telephone"\s*:\s*")\+?\d{10,15}(")', rf'\1+{digits}\2', cleaned)
-        cleaned = re.sub(r'("telephone"\s*:\s*")\(\d{2}\)\s*99999-9999(")', rf'\1{visible_phone}\2', cleaned)
+        cleaned = re.sub(r'("telephone"\s*:\s*")\+?\d{10,15}(")', f'\\1+{digits}\\2', cleaned)
+        cleaned = re.sub(r'("telephone"\s*:\s*")\(\d{2}\)\s*99999-9999(")', f'\\1{visible_phone}\\2', cleaned)
     else:
         cleaned = re.sub(r"\(\d{2}\)\s*99999-9999", "", cleaned)
         cleaned = re.sub(r"(?i)\bwhatsapp:\s*\(\d{2}\)\s*99999-9999\b", "", cleaned)
@@ -593,8 +593,6 @@ def step_deploy(state: PipelineState) -> PipelineState:
 
         # Persist status=concluido + site_url na tabela leads (fail-soft)
         try:
-            from backend.core.database import SessionLocal
-            from sqlalchemy import text as _sql
             _db = SessionLocal()
             try:
                 # Garantir sessao limpa — step anterior pode ter deixado transacao falha
@@ -626,9 +624,10 @@ def step_deploy(state: PipelineState) -> PipelineState:
         except Exception as _pdb:
             logger.error("PIPELINE_DEPLOY_UPDATE_FAILED lead_id=%s tenant_id=%d: %s", state.lead_id, state.tenant_id, _pdb)
     except Exception as e:
+        logger.exception("[Deploy] falha ao publicar HTML (lead=%s)", state.lead_id)
         _log_step_error(state, "Deploy", e)
-        state.error = f"Deploy falhou: {e}"
-        state.history.append(f"Deploy ERRO: {e}")
+        state.error = "Deploy falhou: erro interno na publicação"
+        state.history.append("Deploy ERRO: falha interna na publicação")
         return _transition(state, STATE_FAILED)
 
     return _transition(state, STATE_OUTREACH)

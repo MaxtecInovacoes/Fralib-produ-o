@@ -7,7 +7,6 @@ import asyncio
 import json
 import os
 import re
-import random
 import threading
 import logging
 import time as _time
@@ -816,7 +815,6 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
             return
 
         # Enviar resposta via meowhats COM delay humanizado (composing)
-        import httpx
         meowhats_http = os.getenv("MEOWHATS_URL", "http://localhost:3001")
         try:
             with httpx.Client(timeout=15) as c:
@@ -857,7 +855,6 @@ def _processar_mensagem(tenant_id: str, msg_data: dict, texto_override: str = No
 
     except Exception as e:
         logger.error(f"Erro ao processar mensagem: {e}")
-        import traceback
         logger.error(traceback.format_exc())
 
 async def _conectar_e_ouvir():
@@ -955,7 +952,6 @@ async def iniciar_listener(retry_delay: int = 5):
 
 def start_background_listener():
     """Inicia o listener em background thread (chamado pelo server.py no startup)."""
-    import threading
 
     def _run():
         loop = asyncio.new_event_loop()

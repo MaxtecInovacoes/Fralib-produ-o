@@ -3,7 +3,6 @@
 Configuration module for FraLib LLM client.
 Contains constants, environment variables, and basic configuration.
 """
-from __future__ import annotations
 
 import os
 import sys

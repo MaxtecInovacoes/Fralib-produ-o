@@ -11,7 +11,6 @@ Funcionalidades:
 import os
 import sys
 import time
-import uuid
 import socket
 import logging
 from typing import Optional

@@ -2,12 +2,13 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from datetime import datetime
 
 from database import get_db, get_pipeline_state, update_pipeline_state, SessionLocal
 from auth import get_current_user
 from sse_endpoints import adicionar_log
 from services.credits_manager import validar_permissao_pipeline
+from backend.schemas.pipeline_trigger import PipelineTriggerRequest
+from backend.services.admin_user_service import archive_all_leads
 
 from pipeline_execution import (
     executar_pipeline_completo,
@@ -20,20 +21,18 @@ router = APIRouter(prefix="/api/pipeline", tags=["pipeline"])
 
 
 @router.post("/iniciar")
-async def iniciar_pipeline(
-    request,
+def iniciar_pipeline(
+    body: PipelineTriggerRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ):
     """Inicia pipeline: Hunter -> Caio -> Arquiteto -> Builder -> QA -> Deploy."""
     tenant_id = usuario.get("tenant_id", usuario["id"])
-    body = await request.json()
-    segmento = body.get("segmento", "").strip()
-    cidade = body.get("cidade", "").strip()
-    quantidade = int(body.get("quantidade", 1))
-    quantidade = max(1, min(quantidade, 10))
-    pipeline_id = body.get("pipeline_id", "")
+    segmento = body.segmento.strip()
+    cidade = body.cidade.strip()
+    quantidade = int(body.quantidade)
+    pipeline_id = body.pipeline_id or ""
 
     if not segmento or not cidade:
         raise HTTPException(400, "segmento e cidade sao obrigatorios")
@@ -129,12 +128,9 @@ async def retomar_pipeline(db: Session = Depends(get_db), usuario: dict = Depend
 
 
 @router.post("/arquivar-tudo")
-async def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def arquivar_tudo(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Arquiva todos os leads capturados do tenant."""
     tenant_id = usuario.get("tenant_id", usuario["id"])
-    db.execute(text(
-        "UPDATE leads SET status='arquivado' WHERE user_id=:uid AND status='capturado'"
-    ), {"uid": tenant_id})
-    db.commit()
+    archive_all_leads(db, tenant_id)
     adicionar_log("Todos os leads capturados foram arquivados", "info", user_id=tenant_id)
     return {"ok": True, "mensagem": "Leads arquivados"}

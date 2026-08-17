@@ -236,10 +236,25 @@ ARCHETYPE_MEDIA_MODIFIERS = {
 
 def _get_query_base(segmento: str) -> str:
     seg = segmento.lower().strip().replace("-", "_").replace(" ", "_")
+    # Match exato primeiro (ex: seg == "academia" bate direto)
+    for key, q in QUERIES_NICHO.items():
+        if key == seg or seg == key:
+            return q
+    # Match substring (ex: "academia_hevfit" contém "academia")
     for key, q in QUERIES_NICHO.items():
         if key in seg or seg in key:
             return q
-    return seg.replace("_", " ") + " professional business"
+    # Fallback por grupo semântico — evita query genérica "professional business" para nichos conhecidos
+    fitness_words = ("academia", "fitness", "workout", "crossfit", "pilates", "personal", "fisioterapia", "nutricionista", "natacao", "swim")
+    if any(w in seg for w in fitness_words):
+        return "gym fitness workout training"
+    food_words = ("restaurante", "churrascaria", "lanchonete", "padaria", "confeitaria", "cafe", "pizzaria", "hamburgueria")
+    if any(w in seg for w in food_words):
+        return "restaurant food dining gourmet"
+    service_words = ("barbearia", "salao", "estetica", "odontologia", "clinica", "farmacia", "otica")
+    if any(w in seg for w in service_words):
+        return "professional service business"
+    return seg.replace("_", " ") + " business"
 
 
 def _get_city_modifier(cidade: str) -> str:

@@ -1,6 +1,5 @@
 """Validated palette library for deterministic visual diversity."""
 
-from __future__ import annotations
 
 import hashlib
 from copy import deepcopy

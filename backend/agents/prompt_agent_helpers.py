@@ -1,6 +1,5 @@
 """Prompt Agent helpers: utility, parsing, extraction, formatting functions."""
 
-from __future__ import annotations
 
 import json
 import re

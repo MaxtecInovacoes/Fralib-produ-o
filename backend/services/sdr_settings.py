@@ -4,7 +4,6 @@ The native FraLib SDR remains the safe default. Tenant settings can tune name,
 schedule, tone, handoff and knowledge, but never override platform guardrails.
 """
 
-from __future__ import annotations
 
 import copy
 import json

@@ -3,7 +3,6 @@ import random
 import time
 import asyncio
 import uuid
-from .logs import logger
 
 GOOD_DUMMY_RESPONSE = """---
 name: Dummy

@@ -9,7 +9,6 @@ Substitui o _next_stage antigo por uma decisao baseada em:
 Usado pelo agent.py ao final de cada turno do Franz.
 """
 
-from __future__ import annotations
 
 import logging
 from dataclasses import dataclass

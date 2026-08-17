@@ -1,5 +1,4 @@
 # Franz Tools - MCP-like tool definitions for Franz agent loop
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List

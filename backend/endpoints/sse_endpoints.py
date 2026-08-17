@@ -74,14 +74,13 @@ def _get_notify_conn():
 
 
 def _pg_notify(mensagem: str, tipo: str, user_id=None) -> bool:
-    """
+    F"""
     Publica log via pg_notify no canal do usuário.
     Usa conexão persistente para evitar overhead de connect/close a cada chamada.
     Canal: fralib_logs_{user_id} se user_id, senão fralib_logs (broadcast).
     Retorna True se conseguiu, False se falhou.
     """
     global _notify_lock
-    import threading
     if _notify_lock is None:
         _notify_lock = threading.Lock()
     try:
@@ -142,7 +141,6 @@ async def stream_logs(token: str = Query(..., description="JWT token para autent
         pg_conn = None
         use_pg = False
         try:
-            import psycopg2
             dsn = os.getenv("DATABASE_URL", "")
             pg_conn = psycopg2.connect(dsn)
             pg_conn.autocommit = True

@@ -441,7 +441,6 @@ async def _buscar_detalhes(
         if fast:
             google_maps_embed = ""
             try:
-                import urllib.parse as _up
                 _q = _up.quote(f"{nome}, {cidade}")
                 coord_match = re.search(r'@(-?[0-9]+\.[0-9]+),(-?[0-9]+\.[0-9]+)', maps_url_final)
                 if coord_match:

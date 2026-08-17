@@ -1,6 +1,5 @@
 """Lead Provider: Manual (CSV upload and direct entry)."""
 
-from __future__ import annotations
 
 import csv
 import io
@@ -263,7 +262,6 @@ class ManualProvider:
 
     def _dedupe_key(self, lead: dict[str, Any]) -> str:
         import hashlib
-        import re
 
         place = str(lead.get("place_id") or "").strip().lower()
         if place:
@@ -293,7 +291,6 @@ class ManualProvider:
 
     @staticmethod
     def _slug(value: str) -> str:
-        import re
         import unicodedata
 
         norm = (

@@ -17,11 +17,9 @@ LIMITES:
 - Se ja tentou 3x via job_queue, nao tenta mais
 - Tudo logado pra auditoria
 """
-from __future__ import annotations
 
 import logging
 import os
-import time
 from dataclasses import dataclass
 from typing import Any, Optional
 

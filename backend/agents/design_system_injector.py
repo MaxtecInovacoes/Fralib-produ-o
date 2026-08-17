@@ -4,7 +4,6 @@ Integrador entre design_systems_library e o Vite Builder.
 Recebe facts (segment, subnicho, etc) e retorna o Design System Awwwards-grade
 adequado. Injeta paleta + typography + motion + sections no prompt do Builder.
 """
-from __future__ import annotations
 
 from typing import Any
 

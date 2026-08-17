@@ -5,7 +5,6 @@ of them. This module turns the library into compact, deterministic packs that
 Arquiteto/Builder can actually obey.
 """
 
-from __future__ import annotations
 
 import hashlib
 import json

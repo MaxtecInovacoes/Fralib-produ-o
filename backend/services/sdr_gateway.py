@@ -4,7 +4,6 @@ This module is intentionally deterministic. The LLM can compose a message, but
 this gateway decides whether the system is allowed to send it.
 """
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 import re

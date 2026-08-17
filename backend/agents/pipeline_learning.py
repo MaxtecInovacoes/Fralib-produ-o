@@ -5,7 +5,6 @@ fine-tuning; it is retrieval memory injected by ``llm_direct`` during pipeline
 runs via ``agent_memory``.
 """
 
-from __future__ import annotations
 
 from typing import Any
 

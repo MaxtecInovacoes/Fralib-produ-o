@@ -20,7 +20,6 @@ Severity: info < warning < error < critical
 Dedupe: mesmo (categoria, titulo) em 5min → 1 alerta apenas.
 """
 
-from __future__ import annotations
 
 import logging
 from typing import Any

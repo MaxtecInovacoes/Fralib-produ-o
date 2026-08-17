@@ -1,6 +1,5 @@
 """Lead supply providers package."""
 
-from backend.services.lead_supply_providers.hunter import run_hunter_job
 
 PIPELINE_TYPES = ("pipeline_lead", "pipeline_multiplos", "pipeline_main")
 SUPPLY_HUNTER_JOB = "lead_supply_hunter"

@@ -1,6 +1,5 @@
 """Content validations for generated HTML (text, emojis, emails, fake data)."""
 
-from __future__ import annotations
 
 import html as _html
 import re

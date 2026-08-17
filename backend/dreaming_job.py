@@ -176,7 +176,6 @@ def _podar_memorias_fracas():
 def counterfactual_replay(runs_falhos: list) -> list:
     if not runs_falhos:
         return []
-    from llm_direct import call_claude
 
     hipoteses = []
     for run in runs_falhos[:3]:
@@ -190,7 +189,6 @@ Retorne JSON: {"fase": int, "hipotese": "...", "confianca": 0.5}"""
 O que poderia ter sido feito diferente?"""
 
         try:
-            import re
             resp = call_claude(system=system, user=user, model='haiku', max_tokens=500, temperature=0.5)
             resp = resp.strip()
             if resp.startswith("```"):

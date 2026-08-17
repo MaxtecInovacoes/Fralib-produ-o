@@ -9,9 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from backend.agents.llm_direct import call_claude
 from backend.agents.memory import salvar_memoria
-from backend.agents.agent_rag import format_rag_prompt, get_agent_temperature, buscar_contexto_rag, mark_rag_used
 # from design_system_validator import validar_html, calcular_score_tiers
-from backend.agents.validation_layer import validar_html, calcular_score_validacao
 
 # ===== MODELOS PYDANTIC =====
 
@@ -245,7 +243,6 @@ def auditoria_tecnica(html: str, briefing: str = "") -> AuditoriaTecnica:
         score -= 15
 
     # ═══ CHECKS NOVOS (Módulo Qualidade) ═══
-    import re as _re_liz
 
     # CRÍTICO: H2 duplicados (-10 cada)
     _h2s = _re_liz.findall(r'<h2[^>]*>(.*?)</h2>', html, _re_liz.IGNORECASE | _re_liz.DOTALL)
@@ -740,7 +737,6 @@ def editar_secao(html: str, secao: str, instrucao: str) -> str:
         agent_name="liz",
     )
     # Extração estrita: pegar apenas o HTML, ignorar justificativas em texto plano
-    import re as _re_liz
     _match_liz = _re_liz.search(r'```html\s*(.*?)\s*```', html_editado, _re_liz.DOTALL | _re_liz.IGNORECASE)
     if _match_liz:
         html_editado = _match_liz.group(1).strip()

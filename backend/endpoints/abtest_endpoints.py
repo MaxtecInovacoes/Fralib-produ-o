@@ -9,7 +9,6 @@ Endpoints:
 
 from fastapi import APIRouter, Depends
 from backend.core.db_imports import Session, text  # noqa: F401
-import math
 
 from backend.core.database import get_db
 from backend.core.auth import get_current_user

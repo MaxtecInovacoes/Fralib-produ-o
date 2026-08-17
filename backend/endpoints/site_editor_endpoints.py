@@ -7,7 +7,6 @@ sanitiza contra injecao de script externo, limita tamanho.
 """
 import os
 import re
-import hashlib
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session

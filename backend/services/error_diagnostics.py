@@ -12,7 +12,6 @@ Uso:
     info = diagnosticar("psycopg2.OperationalError: SSL error")
     print(info["titulo"], info["causa"])
 """
-from __future__ import annotations
 
 import re
 from typing import Any

@@ -5,7 +5,6 @@ Revises: provider_keys
 Create Date: 2026-05-14
 """
 from alembic import op
-import sqlalchemy as sa  # noqa: F401
 
 
 revision = 'provider_alerts'

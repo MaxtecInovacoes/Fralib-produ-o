@@ -3,7 +3,6 @@ SDR Tools - Ações que o agente pode executar.
 RAG, memória, validação, envio.
 """
 
-from __future__ import annotations
 import os
 from typing import Optional, List
 
@@ -241,7 +240,6 @@ def is_within_schedule(user_id: Optional[int] = None) -> bool:
 def get_greeting() -> str:
     """Saudação baseada no horário de Brasília"""
     try:
-        from datetime import datetime, timezone, timedelta
         hora = datetime.now(timezone(timedelta(hours=-3))).hour
         if hora < 12:
             return "Bom dia"

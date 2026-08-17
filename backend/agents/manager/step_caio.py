@@ -1,6 +1,5 @@
 """Step: Caio — Fase 2: Qualificação do lead via agente Caio."""
 import logging
-import traceback
 from backend.agents.manager.states import (
     PipelineState, STATE_QUALIFYING, STATE_NICHE_BRIEFING, STATE_FAILED,
     _transition, _log_step_error, _record_agent_handoff,

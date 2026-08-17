@@ -10,7 +10,6 @@ Se --password não for fornecido, usa 'admin123' como padrão.
 import sys
 import os
 import argparse
-import getpass
 
 # Adicionar o diretório raiz ao path para imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

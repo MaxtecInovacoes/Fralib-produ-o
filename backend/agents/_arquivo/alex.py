@@ -6,7 +6,6 @@ from validation_enforcer import require_rag
 from color_extractor import gerar_paleta_completa as _gerar_paleta
 from llm_direct import ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL
 import base64 as _b64
-import re as _re_id
 import requests as _req
 from alex_models import AlexInput, AlexOutput, ALEX_INSTRUCTIONS, gerar_design_tokens
 from alex_logo import limpar_url_google, processar_logo, remover_fundo, vetorizar_logo

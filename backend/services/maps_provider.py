@@ -1,6 +1,5 @@
 """Lead Provider: Google Maps (place-based search via GoSom / Playwright)."""
 
-from __future__ import annotations
 
 import json
 import uuid
@@ -228,7 +227,6 @@ class MapsProvider:
 
     @staticmethod
     def _slug(value: str) -> str:
-        import re
         import unicodedata
 
         norm = (

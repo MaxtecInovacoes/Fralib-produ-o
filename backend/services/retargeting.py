@@ -8,10 +8,8 @@ Job diario (cron 9h BRT):
 - 90d: oferta especial
 - 120d: archive (nao contata mais)
 """
-from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional

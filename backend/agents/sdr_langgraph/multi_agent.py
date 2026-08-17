@@ -5,7 +5,6 @@ is delegated to focused agents. Each handoff leaves a note in LeadMemory so the
 next agent receives the ball with context instead of restarting the script.
 """
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime

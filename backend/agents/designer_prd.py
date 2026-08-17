@@ -1,4 +1,3 @@
-import os
 
 """
 DesignerPRD - modelo/gerador legado de PRD.
@@ -295,7 +294,6 @@ class DesignerPRD(BaseModel):
                 pass
             # Tentar parsear como JSON puro
             try:
-                import json
                 parsed = json.loads(v_stripped)
                 if isinstance(parsed, dict):
                     return {"lat": parsed.get("lat", parsed.get("latitude", 0.0)),

@@ -15,11 +15,9 @@ Resultado:
 - backend/agents/bryan_knowledge/global_lessons.json (cross-tenant)
 - Atualiza rag_knowledge/sdr_agents/*.md
 """
-from __future__ import annotations
 
 import json
 import logging
-import os
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime

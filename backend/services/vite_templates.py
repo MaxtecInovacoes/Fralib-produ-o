@@ -4,7 +4,6 @@ Este modulo contem todos os templates de componentes React usados como fallback
 quando a geracao por LLM falha ou como base para normalizacao.
 """
 
-from __future__ import annotations
 
 import json
 import re

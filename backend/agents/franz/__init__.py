@@ -2,7 +2,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
-from backend.agents.franz.conversion_axes import get_conversion_axis_prompts
 
 
 @dataclass

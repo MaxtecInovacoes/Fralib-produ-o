@@ -12,11 +12,7 @@ Fluxo:
   4. Verifica completude com verify_briefing
   5. Retorna briefing rico em markdown
 """
-import json
 import os
-import re
-import sys
-import time
 import requests
 from dataclasses import dataclass, field
 from typing import Optional, List

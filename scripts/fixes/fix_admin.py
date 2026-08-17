@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Fix leads status para user_id=2 e diagnostica o admin."""
 import subprocess
-import sys
 
 VPS = "root@104.243.41.166"
 CONTAINER = "52bc220171c8_fralib-postgres-1"

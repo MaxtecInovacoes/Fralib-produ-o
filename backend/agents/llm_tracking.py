@@ -3,7 +3,6 @@
 Usage tracking module for FraLib LLM client.
 Handles token counting, cost calculation, and budget ledger recording.
 """
-from __future__ import annotations
 
 
 
@@ -78,8 +77,6 @@ def _registrar_llm_budget(
         latency_ms: Request latency in milliseconds
     """
     try:
-        from backend.core.database import engine
-        from sqlalchemy import text
         try:
             from agents.token_tracker import _calcular_custo, get_tracker
         except Exception:

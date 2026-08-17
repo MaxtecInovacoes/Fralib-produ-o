@@ -6,8 +6,6 @@ from pydantic import BaseModel
 import openai
 import random
 from weave import Dataset
-from weave import Object
-from weave import Model
 from weave import Evaluation
 import asyncio
 
@@ -84,7 +82,7 @@ class PromptSearch(BaseModel):
         return new_prompt_template
 
     def mutate_template(self, prompt_template: str) -> str:
-        mutate_prompt_template = """{instruction}
+        mutate_prompt_template = F"""{instruction}
 
             Initial prompt: 
             {prompt_template}
@@ -106,7 +104,7 @@ class PromptSearch(BaseModel):
         return new_prompt_template
 
     def mutate_template_with_learnings(self, prompt_template: str, learning_list: list) -> str:
-        mutate_prompt_template = """Given the following prompt template for an LLM, write me a better prompt. 
+        mutate_prompt_template = F"""Given the following prompt template for an LLM, write me a better prompt. 
 
             Initial prompt: 
             {prompt_template}
@@ -136,7 +134,7 @@ class PromptSearch(BaseModel):
         return new_prompt_template
 
     def get_learnings_from_pair(self, prompt_template_a: str, prompt_score_a: float, prompt_template_b: str, prompt_score_b: float) -> list:
-        get_learnings_template = """
+        get_learnings_template = F"""
             Here are two prompt templates given to an LLM to complete a task.
             Prompt A got a score: {prompt_score_a}
             Prompt B got a score: {prompt_score_b}

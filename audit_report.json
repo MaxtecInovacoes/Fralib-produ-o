@@ -1,0 +1,4786 @@
+{
+  "root": "C:\\fralib",
+  "total_files_scanned": 401,
+  "total_findings": 682,
+  "severity_counts": {
+    "CRÍTICO": 288,
+    "MÉDIO": 283,
+    "BAIXO": 111
+  },
+  "findings": [
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 1,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"A/B Test Reporting endpoints (Fase 5).\n\nTabela franz_ab_events criada em database.py.\nEndpoints:\n  POST /api/abtest/r",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 34,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register_ab_event` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 41,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register_ab_event` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 48,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/convert/{lead_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 57,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `convert_ab_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 65,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `convert_ab_lead` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 80,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_ab_report` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 37,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `require_superadmin` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 50,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `list_configs` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 72,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{agent_name}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 85,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_config` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 92,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_config` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 97,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_config` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 98,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_config` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 162,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `run_playground` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 173,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `run_playground` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 191,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `playground_history` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 264,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `run_pipeline_sandbox` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 270,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `run_pipeline_sandbox` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 276,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `run_pipeline_sandbox` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 286,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `run_pipeline_sandbox` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 1,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"agentes_endpoints.py — Treino do Franz por conversa (superadmin).\n\nO dono (superadmin) conversa com o Franz no painel",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 122,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 131,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 135,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.rollback()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 143,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 148,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 152,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 155,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 158,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `train_agent` usa chamada síncrona `db.rollback()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 171,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `list_training` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 193,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/training/{rule_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 200,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_training` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 209,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_training` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 234,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `list_sales_axes` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 273,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `toggle_sales_axis` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 279,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `toggle_sales_axis` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 284,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `toggle_sales_axis` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 288,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `toggle_sales_axis` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 291,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `toggle_sales_axis` usa chamada síncrona `db.rollback()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 143,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 150,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 173,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 176,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 179,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `register` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 228,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `reenviar_confirmacao` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 235,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `reenviar_confirmacao` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 237,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `reenviar_confirmacao` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 252,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `esqueci_senha` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 260,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `esqueci_senha` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 263,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `esqueci_senha` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 14,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `criar_tabela_se_nao_existe` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 49,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_beta_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 61,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_beta_lead` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 75,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `listar_beta_leads` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\checkout.py",
+      "line": 671,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `credits_balance` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\checkout.py",
+      "line": 687,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `credits_check` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\status.py",
+      "line": 25,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\status.py",
+      "line": 42,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `credits_check` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 39,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `criar_portal_session` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 85,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 336,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `credits_balance` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 353,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `credits_check` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 22,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_incomplete` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 25,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_incomplete` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 40,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_crm` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 135,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_cost_per_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 181,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 188,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 201,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 224,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 240,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 1,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"\nEndpoints da lista de falhas de pipeline.\n\nGET  /api/falhas             - lista falhas do tenant (com paginacao simp",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 38,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `listar_falhas` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 51,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `listar_falhas` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 85,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `contador_falhas` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 95,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{falha_id}/visto'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 104,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `marcar_visto` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 112,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `marcar_visto` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 118,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{falha_id}/retry'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 132,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `retry_falha` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 167,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `retry_falha` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 175,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `retry_falha` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 1,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"franz_insights_endpoints.py — CRUD de insights do Franz (SDR learning).\n\nEndpoints:\n  GET  /api/franz/insights       ",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 85,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `list_insights` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 92,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/insights/{insight_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 100,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_insight` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 120,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `create_insight` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 132,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `create_insight` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 135,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `create_insight` usa chamada síncrona `db.rollback()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 140,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/insights/{insight_id}/promote'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 151,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `promote_insight` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 159,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `promote_insight` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 166,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `promote_insight` usa chamada síncrona `db.rollback()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 171,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/insights/{insight_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 180,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `discard_insight` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 187,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `discard_insight` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 194,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `discard_insight` usa chamada síncrona `db.rollback()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 228,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/leads/{inventory_id}/discard\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 254,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/leads/{inventory_id}/retry\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 48,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/conversa'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 63,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 89,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/reprocessar'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 110,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/editar-site'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 223,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/upload-foto'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 233,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `upload_foto` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 423,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/chat'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 548,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/aprovar-pipeline'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 569,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/descartar'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 601,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/campos'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 686,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 710,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/feedback'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 795,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/enviar-mensagem'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 802,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `enviar_mensagem_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 867,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `enviar_mensagem_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 870,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `enviar_mensagem_lead` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\llm_endpoints.py",
+      "line": 21,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `llm_usage` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\llm_endpoints.py",
+      "line": 33,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `llm_usage` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\llm_endpoints.py",
+      "line": 45,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `llm_usage` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\obs_endpoints.py",
+      "line": 120,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/trace/{trace_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 24,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_ciclos` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 36,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_fila_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 66,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/reprocessar/{lead_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 81,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `reprocessar_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 88,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `reprocessar_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 91,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `reprocessar_lead` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 119,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `fila_reprocessamento` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_edit_endpoints.py",
+      "line": 31,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `editar_secao_endpoint` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_edit_endpoints.py",
+      "line": 62,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/listar-secoes/{lead_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_edit_endpoints.py",
+      "line": 70,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `listar_secoes_endpoint` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 151,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `emitir_erro_pipeline` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 282,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `executar_pipeline_completo` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 649,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"\n                            UPDATE leads SET dados_completos = jsonb_set(\n                                COALESCE(C",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1728,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `executar_pipeline_multiplos` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2219,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `executar_pipeline_lead_existente` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2558,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/reprocessar/{lead_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 20,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `require_superadmin` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 54,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `list_alerts` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 88,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `list_alerts` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 96,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `unread_count` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 100,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{alert_id}/read'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 104,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `mark_read` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 110,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `mark_read` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 112,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `mark_read` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 120,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `mark_all_read` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 124,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `mark_all_read` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 129,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{alert_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 133,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_alert` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 137,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_alert` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 138,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_alert` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 148,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_all_read` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 149,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `delete_all_read` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 37,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `require_superadmin` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 102,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{key_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 158,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{key_id}'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 169,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{key_id}/toggle'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 180,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{key_id}/reset-cooldown'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 207,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{key_id}/test'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\queue_endpoints.py",
+      "line": 38,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/job/{job_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 83,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/html'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 101,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/salvar-html'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 133,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_html` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 137,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_html` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 155,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '/{lead_id}/editar-ia'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 282,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `editar_com_ia` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 284,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `editar_com_ia` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\sse_endpoints.py",
+      "line": 235,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `adicionar_log` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 20,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `require_superadmin` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 198,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/users/{user_id}/toggle\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 224,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/users/{user_id}/set-plan\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 246,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/users/{user_id}/set-creditos\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 266,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/impersonate/{user_id}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 722,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/dashboard/jobs/{job_id}/replay\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 16,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"Checa se o WhatsApp do user esta conectado no meowhats.\n\n    Tem dois caminhos: rota direta /api/sessions/{tenant}/st",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 87,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_profile` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 112,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_profile` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 113,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_profile` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 122,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `onboarding_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 134,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `onboarding_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 139,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `onboarding_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 164,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `criar_lead_demo` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 172,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `criar_lead_demo` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 188,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `criar_lead_demo` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 201,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `status_anthropic_key` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 222,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_anthropic_key` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 231,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_anthropic_key` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 233,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_anthropic_key` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 244,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `remover_anthropic_key` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 246,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `remover_anthropic_key` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 266,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_sdr_horario` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 300,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_sdr_horario` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 303,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `salvar_sdr_horario` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 331,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `change_password` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 344,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `change_password` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 346,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `change_password` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 66,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `whatsapp_connect` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 152,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_bot_config` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 171,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_bot_config` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 180,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `update_bot_config` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\cakto_client.py",
+      "line": 151,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"Cria oferta (preco + trial + recorrencia) para um produto.\n\n        Retorna dict com ``id`` da oferta — checkout URL ",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 30,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Oi {nome}, tudo certo?\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 31,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Passando pra avisar que preparei o exemplo do site pro {segmento}.\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 32,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Se quiser dar uma olhada: {link_site}\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 36,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Oi {nome}, lembra da gente?\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 37,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Um cliente do {segmento} na sua regiao triplicou os contatos em 60 dias.\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 38,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Posso te mandar o exemplo? {link_site}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 41,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Oi {nome}, oferta especial essa semana pra voce:\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 42,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Site premium pro {segmento} com condicao especial.\\n\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\retargeting.py",
+      "line": 43,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Quer ver? {link_site}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\vite_prompts.py",
+      "line": 128,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"You are generating file batch \"{batch_name}\" for a Vite React landing page.\n\nReturn ONLY a JSON object with the reque",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\vite_templates.py",
+      "line": 494,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"import * as React from 'react';\n\ntype DivProps = React.HTMLAttributes<HTMLDivElement>;\n\nexport function Card({ classN",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\vite_templates.py",
+      "line": 533,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"import { useEffect, useState } from 'react';\nimport { ShieldCheck, X } from 'lucide-react';\nimport { motion } from 'm",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 34,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 57,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\abtest_endpoints.py",
+      "line": 80,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 70,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 97,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 102,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 111,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 122,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 132,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 141,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 157,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 179,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 207,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 220,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 304,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 313,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 346,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 358,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 458,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 464,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 595,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 609,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 634,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\admin_pipeline_control_endpoints.py",
+      "line": 676,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 50,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 85,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 92,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 97,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 162,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 191,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 264,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 276,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 286,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 122,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 143,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 148,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 152,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 171,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 200,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 234,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 273,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 279,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agentes_endpoints.py",
+      "line": 284,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 50,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 57,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 78,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 83,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 120,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 143,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 150,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 173,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 179,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 212,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 221,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 228,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 235,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 252,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 260,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 274,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 290,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 307,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 314,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\auth_endpoints.py",
+      "line": 320,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 15,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 49,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\beta_endpoints.py",
+      "line": 75,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\checkout.py",
+      "line": 671,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\checkout.py",
+      "line": 687,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\status.py",
+      "line": 25,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits\\status.py",
+      "line": 42,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 39,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 85,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 336,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\credits_endpoints.py",
+      "line": 353,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 22,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 25,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 40,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 135,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 181,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 188,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 201,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 224,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\dashboard_endpoints.py",
+      "line": 240,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 38,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 51,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 85,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 104,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 132,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\falhas_endpoints.py",
+      "line": 167,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 85,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 100,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 120,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 151,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\franz_insights_endpoints.py",
+      "line": 180,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 21,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 39,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 236,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 262,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\lead_supply_endpoints.py",
+      "line": 289,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 16,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 52,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 82,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 93,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 96,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 113,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 123,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 233,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 313,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 409,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 428,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 431,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 453,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 475,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 488,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 501,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 527,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 552,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 555,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 573,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 576,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 605,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 631,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 647,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 671,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 690,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 694,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 695,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 729,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 742,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 752,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 770,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 802,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 867,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 896,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 948,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 1004,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 1029,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\llm_endpoints.py",
+      "line": 21,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\llm_endpoints.py",
+      "line": 33,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\llm_endpoints.py",
+      "line": 45,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 24,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 36,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 81,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 88,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_crud.py",
+      "line": 119,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_edit_endpoints.py",
+      "line": 31,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_edit_endpoints.py",
+      "line": 70,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 100,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 106,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 111,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 131,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 214,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1692,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1787,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1849,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1871,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1899,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1916,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1989,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1990,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1991,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1992,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2014,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2039,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2042,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2085,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2137,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2180,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2209,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2566,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2569,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2600,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2630,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2631,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2632,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2633,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2644,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2647,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2650,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2652,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2676,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2677,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2680,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2691,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2700,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2701,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 28,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 54,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 88,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 96,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 104,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 110,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 120,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 133,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 137,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_alerts_endpoints.py",
+      "line": 148,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 45,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 171,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 182,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\provider_keys_endpoints.py",
+      "line": 210,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 74,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 133,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\site_editor_endpoints.py",
+      "line": 282,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 29,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 55,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 58,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 63,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 66,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 71,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 78,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 91,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 121,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 149,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 202,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 210,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 270,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 315,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 321,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 326,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 334,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 342,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 401,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 411,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 421,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 462,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 475,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 491,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 506,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 527,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 553,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 561,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 568,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 597,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 603,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 612,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 641,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 648,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 657,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 667,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 672,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 706,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 727,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 730,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 748,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\superadmin_endpoints.py",
+      "line": 763,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\tracking_endpoints.py",
+      "line": 41,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\tracking_endpoints.py",
+      "line": 50,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\tracking_endpoints.py",
+      "line": 58,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 122,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 134,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 139,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 164,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 172,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 201,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 222,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 231,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 244,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 266,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 300,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 331,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 344,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 66,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 152,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\whatsapp_endpoints.py",
+      "line": 171,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\agent_config_endpoints.py",
+      "line": 102,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.llm_direct._invalidar_agent_config_cache`; primeira ocorrência na linha 256",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\api_usage_endpoints.py",
+      "line": 43,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.timezone`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 112,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `sqlalchemy.text`; primeira ocorrência na linha 3",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 134,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 119",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 247,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 119",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 294,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `pydantic.BaseModel`; primeira ocorrência na linha 104",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 378,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 119",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 387,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.datetime`; primeira ocorrência na linha 309",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 389,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 105",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 589,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `pydantic.BaseModel`; primeira ocorrência na linha 104",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 590,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `typing.Optional`; primeira ocorrência na linha 295",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 798,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 105",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\leads_endpoints.py",
+      "line": 798,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 119",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_edit_endpoints.py",
+      "line": 68,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.liz.listar_secoes`; primeira ocorrência na linha 29",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 19,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `logging`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 116,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.datetime`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 116,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.timedelta`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 290,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 365,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 379,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 450,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `hashlib`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 481,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `concurrent.futures.ThreadPoolExecutor`; primeira ocorrência na linha 6",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 507,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 648,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 763,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.caio.CaioOutput`; primeira ocorrência na linha 378",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 810,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.caio.qualificar_lead`; primeira ocorrência na linha 2371",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 810,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.caio.LeadInput`; primeira ocorrência na linha 2371",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 837,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1150,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1202,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1387,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `job_queue`; primeira ocorrência na linha 1938",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1416,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1476,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.token_tracker.set_tracker`; primeira ocorrência na linha 318",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1486,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agent_router.set_router`; primeira ocorrência na linha 866",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1551,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1822,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.datetime`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1822,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.timezone`; primeira ocorrência na linha 116",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 1822,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.timedelta`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2044,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.datetime`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2044,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.timezone`; primeira ocorrência na linha 116",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2044,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.timedelta`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2233,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 153",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2329,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `asyncio`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2344,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `hashlib`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2344,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2370,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `asyncio`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2370,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `hashlib`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\pipeline_endpoints.py",
+      "line": 2370,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `random`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 120,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `httpx`; primeira ocorrência na linha 8",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\endpoints\\users_endpoints.py",
+      "line": 120,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\credits_manager.py",
+      "line": 1,
+      "problem": "syntax_error",
+      "detail": "invalid non-printable character U+FEFF",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\services\\pipeline_state.py",
+      "line": 93,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.pipeline_checkpoint.gerar_pipeline_id`; primeira ocorrência na linha 36",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agent_router.py",
+      "line": 26,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `calcular_complexidade_lead` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agent_router.py",
+      "line": 110,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `set_router` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agent_router.py",
+      "line": 114,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_router` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\bloco_copy.py",
+      "line": 56,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"## depoimentos\nomitir: {omitir_val}\nh2: titulo\nbody: texto com reviews reais\"\"\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\builder\\quality_gate_v2\\inject.py",
+      "line": 63,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"Replace {placeholder} tokens in partial HTML with PRD values.\n\n    Falls back to sensible defaults when the PRD doesn",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\cinematic_post_processor.py",
+      "line": 209,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"\n<script>\n(function() {\n  'use strict';\n  document.documentElement.classList.remove('no-js');\n\n  // ── Scroll Progres",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\franz\\franz_agent_loop.py",
+      "line": 111,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"{nome}, vi que você tem um negócio de {segmento} em {cidade}! 🚀 Muitos empresários da área estão usando site profission",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\franz\\franz_agent_loop.py",
+      "line": 112,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Oi {nome}! Tudo bem? Estou entrando em contato sobre {segmento} em {cidade} — preparei uma oferta especial pra você! 😊\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\franz\\franz_agent_loop.py",
+      "line": 113,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"E aí {nome}! Aqui é o Franz da FraLib. Vi que você trabalha com {segmento} aí em {cidade} e tenho uma ideia que pode mu",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\franz\\franz_agent_loop.py",
+      "line": 121,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Te entendo, {nome}. O investimento é menor do que parece — muitos clientes recuperam o valor no primeiro mês. Quer que ",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\franz\\franz_agent_loop.py",
+      "line": 129,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"Oi {nome}! Passando pra ver se conseguiu ver a proposta. Alguma dúvida? Estou aqui! 😊\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\franz\\franz_agent_loop.py",
+      "line": 130,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"E aí, {nome}! Lembrete: a oferta especial pra {cidade} ainda tá valendo essa semana. Quer avançar?\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\lgpd_personalized.py",
+      "line": 77,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '''\";\n\n  return (\n    <motion.div\n      data-lgpd-banner\n      initial={{ opacity: 0, y: 24 }}\n      animate={{ opacity:",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\liz.py",
+      "line": 713,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: rf'<!--\\s*SECTION:\\s*{secao}\\s*-->(.*?)<!--\\s*/SECTION:\\s*{secao}\\s*-->'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_router.py",
+      "line": 134,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_circuit_breaker` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_router.py",
+      "line": 156,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_model_map` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_router.py",
+      "line": 161,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `resolve_model_id` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_router.py",
+      "line": 419,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_router` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_router.py",
+      "line": 427,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `call_llm` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_router.py",
+      "line": 454,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `call_llm_direct` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\pipeline_checkpoint.py",
+      "line": 1,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"\nSistema de Checkpoint do Pipeline FraLib\nSalva estado de cada agente para retomar de onde parou.\n\nMulti-tenant: o pi",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\sdr_langgraph\\prompts.py",
+      "line": 244,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: 'Neighbor signal: \"Boa tarde! Voces trabalham mais com {segmento} ou atendem outro foco tambem?\"'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\sdr_langgraph\\prompts.py",
+      "line": 245,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: 'Observation signal: \"Vi voces no Google com {rating} estrelas, isso chama atencao.\"'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\sdr_langgraph\\prompts.py",
+      "line": 246,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: 'Research signal: \"Estou fazendo um levantamento rapido sobre {segmento} em {cidade}.\"'",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\sdr_langgraph\\tools.py",
+      "line": 55,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"Classify the lead intent into exactly ONE category.\n\n- opt_out: \"não quero\", \"para\", \"me tira\", \"chega\", \"remover\"\n- ",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\section_editor.py",
+      "line": 9,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: rf\"<!--\\s*SECTION:\\s*{secao}\\s*-->(.*?)<!--\\s*/SECTION:\\s*{secao}\\s*-->\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\visual_fingerprint.py",
+      "line": 145,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: rf\"{name}\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\design_system_router.py",
+      "line": 75,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `build_visual_seed` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\design_system_router.py",
+      "line": 79,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `build_design_dna` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\design_system_router.py",
+      "line": 179,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `choose_section_variant` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\observability_setup.py",
+      "line": 50,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"{time:ISO8601} | {level} | {name}:{function}:{line} | {message}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\observability_setup.py",
+      "line": 57,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"<green>{time:HH:mm:ss}</green> | <level>{level}</level> | <cyan>{name}:{function}:{line}</cyan> | <level>{message}</lev",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\router_setup.py",
+      "line": 29,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `register_routers` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\dreaming_job.py",
+      "line": 97,
+      "problem": "blind_json_truncation",
+      "detail": "Sites APROVADOS ({len(dados['sucesso'])}): {json.dumps(sucesso_resumo, ensure_ascii=False)[:1000]}",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\dreaming_job.py",
+      "line": 98,
+      "problem": "blind_json_truncation",
+      "detail": "Sites REPROVADOS ({len(dados['falha'])}): {json.dumps(falha_resumo, ensure_ascii=False)[:1000]}",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\integration_healthcheck.py",
+      "line": 187,
+      "problem": "blind_json_truncation",
+      "detail": "check(\"POST /api/auth/login\", False, f\"HTTP {code}: {json.dumps(data)[:150]}\")",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\utils\\google_maps_gosom.py",
+      "line": 1,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"\nGoogle Maps Scraper Client — gosom/google-maps-scraper\nAlternativa open-source ao Playwright. Roda como daemon na VP",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 364,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"Retorna True se o tenant esta com WhatsApp pareado e pronto para envio.\n\n    Usa o cache local (alimentado pelo WebSo",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 448,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"Converte tenant_id 'fralib_user_{N}' em int N, ou None se inválido.\"\"\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\config.py",
+      "line": 44,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"sk-{SESSION_KEY}\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\eval\\to_fine_tune.py",
+      "line": 10,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_he",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\generate.py",
+      "line": 570,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"PRD_OPENUI: prompt_inicio=[{preview}]\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 395,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_openai_models` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 405,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_ollama_models` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 413,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_groq_models` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 423,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `get_litellm_models` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 520,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/openui/{name}.svg\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 544,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/openui/{name}.mp3\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 588,
+      "problem": "router_function_without_decorator",
+      "detail": "Função de topo `check_wandb_auth` em arquivo de router sem decorator",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\dashboard_analytics.py",
+      "line": 24,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\dashboard_analytics.py",
+      "line": 38,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\dashboard_analytics.py",
+      "line": 52,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 98,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 128,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 137,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_status` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 192,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `save_config` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 213,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `save_config` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 229,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `start_supply` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 233,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `start_supply` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 236,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `start_supply` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 269,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `pause_supply` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 274,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `pause_supply` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 346,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `retry_all` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 355,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `retry_all` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 365,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `retry_all` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 27,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_escalados` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 54,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"/{lead_id}/assumir\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 63,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `assumir_lead` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 73,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `assumir_lead` usa chamada síncrona `db.commit()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 91,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_conversas_ativas` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 133,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 148,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 163,
+      "problem": "async_endpoint_uses_sync_db_method",
+      "detail": "Endpoint async `get_pipeline_analytics` usa chamada síncrona `db.execute()` em parâmetro Depends(get_db)",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\patch_leads.py",
+      "line": 9,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: '''\n\n# ─── Adicionado por Hermes (2026-08-06) ─────────────────────────────────────\n\n@router.get(\"/escalados\")\nasync def",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy_openui_python.py",
+      "line": 46,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"\"\"[Unit]\nDescription=FraLib OpenUI Python Service (wandb/openui + LiteLLM)\nAfter=network.target\n\n[Service]\nType=simple\n",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy_openui_python.py",
+      "line": 85,
+      "problem": "string_missing_f_prefix",
+      "detail": "String literal contém placeholder de interpolação sem prefixo f: \"curl -s -o /dev/null -w '%{http_code}' http://localhost:7878/v1/models 2>/dev/null\"",
+      "severity": "CRÍTICO"
+    },
+    {
+      "file": "C:\\fralib\\openui-service-wandb\\backend\\openui\\server.py",
+      "line": 113,
+      "problem": "endpoint_uses_request_json_instead_of_pydantic",
+      "detail": "Endpoint async `chat_completions` usa await request.json() sem modelo Pydantic explícito",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\dashboard_analytics.py",
+      "line": 24,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\dashboard_analytics.py",
+      "line": 38,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\dashboard_analytics.py",
+      "line": 52,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 98,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 128,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 137,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 192,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 229,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 236,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 269,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 346,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\lead_supply_endpoints.py",
+      "line": 355,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 27,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 63,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 91,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 133,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 148,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\deploy\\leads_missing_endpoints.py",
+      "line": 163,
+      "problem": "direct_db_execute_in_router",
+      "detail": "Uso direto de db.execute(text(...)) em arquivo de router",
+      "severity": "MÉDIO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\color_enforcer.py",
+      "line": 1,
+      "problem": "syntax_error",
+      "detail": "invalid non-printable character U+FEFF",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\design_context.py",
+      "line": 550,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 562",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\design_context.py",
+      "line": 1061,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 562",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\design_prompts.py",
+      "line": 34,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `design_context.get_design_context`; primeira ocorrência na linha 11",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\html_builder_repair.py",
+      "line": 267,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.agents.html_phase6_repair.publication_page_title`; primeira ocorrência na linha 195",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\html_builder_repair.py",
+      "line": 273,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.agents.html_phase6_repair.publication_page_description`; primeira ocorrência na linha 195",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\jina_research.py",
+      "line": 7,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 1",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\liz.py",
+      "line": 73,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\liz.py",
+      "line": 144,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\liz.py",
+      "line": 162,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\liz.py",
+      "line": 222,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_agent_config.py",
+      "line": 56,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.agents.llm_config`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_config.py",
+      "line": 63,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.core.proxy_models.PROXY_BUILDER_MODEL`; primeira ocorrência na linha 55",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_config.py",
+      "line": 63,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.core.proxy_models.PROXY_DEFAULT_MODEL`; primeira ocorrência na linha 55",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_config.py",
+      "line": 63,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.core.proxy_models.PROXY_LIGHT_MODEL`; primeira ocorrência na linha 55",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_config.py",
+      "line": 63,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.core.proxy_models.PROXY_PROVIDER`; primeira ocorrência na linha 55",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_config.py",
+      "line": 63,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.core.proxy_models.is_proxy_model`; primeira ocorrência na linha 55",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_context.py",
+      "line": 245,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `ia_manager`; primeira ocorrência na linha 121",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_direct.py",
+      "line": 402,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `time`; primeira ocorrência na linha 26",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_direct.py",
+      "line": 672,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `ia_manager`; primeira ocorrência na linha 349",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_direct.py",
+      "line": 942,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `ia_manager`; primeira ocorrência na linha 349",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_tracking.py",
+      "line": 81,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.token_tracker.get_tracker`; primeira ocorrência na linha 30",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\llm_tracking.py",
+      "line": 83,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `token_tracker.get_tracker`; primeira ocorrência na linha 32",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\pipeline_learning.py",
+      "line": 106,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agent_memory.MemoryEntry`; primeira ocorrência na linha 46",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\pipeline_learning.py",
+      "line": 108,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.agent_memory.MemoryEntry`; primeira ocorrência na linha 48",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\prompt_agent_context.py",
+      "line": 205,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.agents.prompt_agent_helpers._as_list`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\sdr_langgraph\\compat.py",
+      "line": 120,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.memory.carregar_memoria`; primeira ocorrência na linha 88",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\sdr_langgraph\\compat.py",
+      "line": 225,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.memory.carregar_memoria`; primeira ocorrência na linha 88",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\theo.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 6",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\theo.py",
+      "line": 79,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\theo.py",
+      "line": 236,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\theo.py",
+      "line": 470,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `time`; primeira ocorrência na linha 79",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\theo.py",
+      "line": 737,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `typing.Optional`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\agents\\theo.py",
+      "line": 738,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `pydantic.BaseModel`; primeira ocorrência na linha 8",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\database.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `proxy_models.ALLOWED_PROXY_MODELS`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\database.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `proxy_models.PROXY_BUILDER_MODEL`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\database.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `proxy_models.PROXY_DEFAULT_MODEL`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\database.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `proxy_models.PROXY_LIGHT_MODEL`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\core\\database.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `proxy_models.PROXY_PROVIDER`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\utils\\agente1_hunter_v2.py",
+      "line": 623,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.caio.LeadInput`; primeira ocorrência na linha 570",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\utils\\agente1_hunter_v2.py",
+      "line": 623,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `agents.caio.qualificar_lead`; primeira ocorrência na linha 570",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\utils\\google_scraper_core.py",
+      "line": 82,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `asyncio`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\utils\\google_scraper_core.py",
+      "line": 198,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `asyncio`; primeira ocorrência na linha 4",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 64,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `time`; primeira ocorrência na linha 12",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 82,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.date`; primeira ocorrência na linha 13",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 203,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `sqlalchemy.text`; primeira ocorrência na linha 18",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 430,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `sqlalchemy.create_engine`; primeira ocorrência na linha 18",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 430,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `sqlalchemy.text`; primeira ocorrência na linha 18",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 734,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `re`; primeira ocorrência na linha 9",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 784,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `datetime.datetime`; primeira ocorrência na linha 13",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\backend\\whatsapp_listener.py",
+      "line": 913,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `json`; primeira ocorrência na linha 7",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\frontend\\build.py",
+      "line": 17,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `shutil`; primeira ocorrência na linha 85",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\frontend\\build.py",
+      "line": 85,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `os`; primeira ocorrência na linha 6",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\prime-agent\\packages\\coding-agent\\skills\\attach-image\\src\\attach_image\\attach_image.py",
+      "line": 40,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `PIL.Image`; primeira ocorrência na linha 107",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\prime-agent\\packages\\coding-agent\\skills\\attach-image\\src\\attach_image\\attach_image.py",
+      "line": 57,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `PIL.Image`; primeira ocorrência na linha 107",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\prime-agent\\packages\\coding-agent\\skills\\attach-image\\src\\attach_image\\attach_image.py",
+      "line": 148,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `PIL.Image`; primeira ocorrência na linha 107",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\scripts\\fixes\\worker_patched.py",
+      "line": 200,
+      "problem": "syntax_error",
+      "detail": "expected 'except' or 'finally' block",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\server.py",
+      "line": 198,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `sys`; primeira ocorrência na linha 20",
+      "severity": "BAIXO"
+    },
+    {
+      "file": "C:\\fralib\\server.py",
+      "line": 329,
+      "problem": "duplicate_import",
+      "detail": "Import duplicado de `backend.core.observability_setup.deep_health_check`; primeira ocorrência na linha 5",
+      "severity": "BAIXO"
+    }
+  ]
+}

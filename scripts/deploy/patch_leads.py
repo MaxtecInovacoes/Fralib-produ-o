@@ -1,5 +1,4 @@
 """Patch: adiciona endpoints faltantes ao leads_endpoints.py existente."""
-import re
 
 filepath = "/opt/fralib/backend/endpoints/leads_endpoints.py"
 

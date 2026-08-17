@@ -1,4 +1,3 @@
-import os
 
 """
 Caio - Qualificador de Leads (Python puro, zero LLM)

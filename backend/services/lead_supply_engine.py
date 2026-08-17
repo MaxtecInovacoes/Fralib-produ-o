@@ -8,61 +8,20 @@ from the modularized components:
 - lead_supply_inventory: Status, candidates, locks and job handling
 """
 
-from __future__ import annotations
 
 import sys
 
 # Re-export providers
-from backend.services.lead_supply_providers import (
-    PIPELINE_TYPES,
-    PLAN_DAILY_CAPS,
-    PRODUCTION_TICK_JOB,
-    SUPPLY_CAIO_JOB,
-    SUPPLY_HUNTER_JOB,
-    run_hunter_job,
-)
-from backend.services.lead_supply_providers.caio import run_caio_job
-from backend.services.lead_supply_providers.maps import run_production_tick
 
 # Re-export filters
-from backend.services.lead_supply_filters import (
-    _slug,
-    dedupe_key,
-    default_targets,
-    normalize_list,
-)
 
 # Re-export storage (schema and config)
-from backend.services.lead_supply_storage import (
-    ensure_schema,
-    get_or_create_config,
-    save_config,
-    get_user_plan,
-    set_pause,
-)
 
 # Re-export inventory operations
-from backend.services.lead_supply_inventory import (
-    status,
-    sync_supply,
-    _store_candidate,
-    _enqueue_caio,
-    _existing_names,
-    _reserve_next,
-    _ensure_lead_row,
-    _lead_to_dict,
-    _compute_live_status,
-    handle_pipeline_job_finished,
-    reap_stale_inventory_locks,
-    enqueue_hunter,
-    enqueue_production_tick,
-)
 
 # Re-export _event helper (from storage, used by inventory)
-from backend.services.lead_supply_storage import _event
 
 # Re-export _row_to_config (from storage, used by inventory)
-from backend.services.lead_supply_storage import _row_to_config
 
 __all__ = [
     # Constants

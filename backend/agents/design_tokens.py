@@ -8,7 +8,6 @@ Este módulo contém os dados estáticos de design system:
 
 Mantido separado para facilitar versionamento e testes.
 """
-from __future__ import annotations
 
 import os
 import json

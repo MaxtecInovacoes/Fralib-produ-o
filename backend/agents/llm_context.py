@@ -3,7 +3,6 @@
 Context management module for FraLib LLM client.
 Handles thread-local context, user tracking, tenant rate limiting, and BYOK key resolution.
 """
-from __future__ import annotations
 
 import os
 import threading as _threading

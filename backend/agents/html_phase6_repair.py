@@ -6,7 +6,6 @@ Handles deterministic repairs to ensure Phase 6 contract compliance:
 - CSS contract and animation foundations
 """
 
-from __future__ import annotations
 
 import html as _html
 import re

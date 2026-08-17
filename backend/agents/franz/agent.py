@@ -2,7 +2,6 @@
 
 Re-exports conversion_axes and provides normalize_axis for training rules.
 """
-from __future__ import annotations
 
 import unicodedata
 

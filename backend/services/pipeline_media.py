@@ -4,7 +4,6 @@ This module contains functions for handling editorial images, media URLs,
 and text cleaning used across the pipeline.
 """
 
-from __future__ import annotations
 
 from urllib.parse import urlsplit
 
@@ -175,7 +174,6 @@ def media_defaults_for_segment(segmento: Any) -> dict[str, Any]:
         >>> "photos" in defaults
         True
     """
-    from backend.services.pipeline_validators import normalize_segment
 
     normalized = normalize_segment(segmento)
     for key, item in NICHE_MEDIA_LIBRARY.items():

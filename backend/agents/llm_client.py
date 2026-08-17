@@ -3,7 +3,6 @@
 Low-level client module for FraLib LLM client.
 Handles SDK client creation, LiteLLM OpenAI chat, error handling, and tool_use extraction.
 """
-from __future__ import annotations
 
 import json
 import os

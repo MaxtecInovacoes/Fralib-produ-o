@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
+CIDADE = "{" + "cidade" + "}"
+
 _AGENTS_DIR = os.path.dirname(os.path.abspath(__file__))
 _BACKEND_DIR = os.path.dirname(_AGENTS_DIR)
 _ROOT_DIR = os.path.dirname(_BACKEND_DIR)
@@ -21,38 +23,38 @@ load_dotenv(os.path.join(_BACKEND_DIR, ".env"))
 # Queries focadas em intenção transacional/comercial por nicho
 # "o que as pessoas buscam quando querem PAGAR por esse serviço"
 QUERIES_TRANSACIONAIS = {
-    "academia": "academia {cidade} preço mensalidade matrícula perto",
-    "crossfit": "crossfit {cidade} aula experimental preço matrícula",
-    "barbearia": "barbearia {cidade} corte masculino agendamento preço",
-    "salao": "salão de beleza {cidade} progressiva coloração agendamento",
-    "clinica": "clínica médica {cidade} consulta particular agendamento preço",
-    "odontologia": "dentista {cidade} implante clareamento consulta preço",
-    "estetica": "clínica estética {cidade} tratamento preço agendamento",
-    "nutricionista": "nutricionista {cidade} consulta preço plano alimentar",
-    "psicologia": "psicólogo {cidade} consulta particular preço agendamento",
-    "advocacia": "advogado {cidade} consulta honorários trabalhista",
-    "contabilidade": "contador {cidade} MEI abertura empresa preço",
-    "imobiliaria": "imobiliária {cidade} apartamento comprar alugar",
-    "restaurante": "restaurante {cidade} delivery reserva cardápio",
-    "pizzaria": "pizzaria {cidade} delivery pedido promoção",
-    "padaria": "padaria {cidade} encomenda bolo pão artesanal",
-    "pet": "pet shop {cidade} banho tosa veterinário preço",
-    "farmacia": "farmácia {cidade} manipulação delivery plantão",
-    "escola": "escola {cidade} matrícula mensalidade ensino",
-    "auto_pecas": "mecânica {cidade} orçamento revisão preço",
-    "arquitetura": "arquiteto {cidade} projeto residencial preço",
-    "fotografia": "fotógrafo {cidade} ensaio casamento preço",
+    "academia": "academia " + CIDADE + " preço mensalidade matrícula perto",
+    "crossfit": "crossfit " + CIDADE + " aula experimental preço matrícula",
+    "barbearia": "barbearia " + CIDADE + " corte masculino agendamento preço",
+    "salao": "salão de beleza " + CIDADE + " progressiva coloração agendamento",
+    "clinica": "clínica médica " + CIDADE + " consulta particular agendamento preço",
+    "odontologia": "dentista " + CIDADE + " implante clareamento consulta preço",
+    "estetica": "clínica estética " + CIDADE + " tratamento preço agendamento",
+    "nutricionista": "nutricionista " + CIDADE + " consulta preço plano alimentar",
+    "psicologia": "psicólogo " + CIDADE + " consulta particular preço agendamento",
+    "advocacia": "advogado " + CIDADE + " consulta honorários trabalhista",
+    "contabilidade": "contador " + CIDADE + " MEI abertura empresa preço",
+    "imobiliaria": "imobiliária " + CIDADE + " apartamento comprar alugar",
+    "restaurante": "restaurante " + CIDADE + " delivery reserva cardápio",
+    "pizzaria": "pizzaria " + CIDADE + " delivery pedido promoção",
+    "padaria": "padaria " + CIDADE + " encomenda bolo pão artesanal",
+    "pet": "pet shop " + CIDADE + " banho tosa veterinário preço",
+    "farmacia": "farmácia " + CIDADE + " manipulação delivery plantão",
+    "escola": "escola " + CIDADE + " matrícula mensalidade ensino",
+    "auto_pecas": "mecânica " + CIDADE + " orçamento revisão preço",
+    "arquitetura": "arquiteto " + CIDADE + " projeto residencial preço",
+    "fotografia": "fotógrafo " + CIDADE + " ensaio casamento preço",
 }
 
 # Queries de concorrência — quem está rankeando e o que oferecem
 QUERIES_CONCORRENCIA = {
-    "academia": "melhor academia {cidade} avaliações",
-    "barbearia": "melhor barbearia {cidade} avaliações",
-    "nutricionista": "melhor nutricionista {cidade} avaliações resultado",
-    "odontologia": "melhor dentista {cidade} avaliações implante",
-    "estetica": "melhor clínica estética {cidade} resultado antes depois",
-    "restaurante": "melhor restaurante {cidade} avaliações",
-    "advocacia": "melhor advogado {cidade} trabalhista resultado",
+    "academia": "melhor academia " + CIDADE + " avaliações",
+    "barbearia": "melhor barbearia " + CIDADE + " avaliações",
+    "nutricionista": "melhor nutricionista " + CIDADE + " avaliações resultado",
+    "odontologia": "melhor dentista " + CIDADE + " avaliações implante",
+    "estetica": "melhor clínica estética " + CIDADE + " resultado antes depois",
+    "restaurante": "melhor restaurante " + CIDADE + " avaliações",
+    "advocacia": "melhor advogado " + CIDADE + " trabalhista resultado",
 }
 
 
@@ -88,8 +90,8 @@ def _garantir_tabela():
         """)
         conn.commit()
         conn.close()
-    except Exception as e:
-        print(f"[KW] Erro ao criar tabela: {e}")
+    except Exception:
+        print("[KW] Erro ao criar tabela")
 
 
 def _cache_get(segmento: str, cidade: str) -> str | None:
@@ -113,8 +115,8 @@ def _cache_get(segmento: str, cidade: str) -> str | None:
             return dados
         print(f"[KW] Cache EXPIRADO: {segmento} em {cidade} — renovando")
         return None
-    except Exception as e:
-        print(f"[KW] Erro cache_get: {e}")
+    except Exception:
+        print("[KW] Erro cache_get")
         return None
 
 
@@ -135,8 +137,8 @@ def _cache_set(segmento: str, cidade: str, dados: str):
         conn.commit()
         conn.close()
         print(f"[KW] Cache salvo: {segmento} em {cidade}")
-    except Exception as e:
-        print(f"[KW] Erro cache_set: {e}")
+    except Exception:
+        print("[KW] Erro cache_set")
 
 
 def _jina_buscar(query: str, timeout: int = 15) -> str:
@@ -154,8 +156,8 @@ def _jina_buscar(query: str, timeout: int = 15) -> str:
         if resp.status_code == 200:
             return resp.text[:3000]
         return ""
-    except Exception as e:
-        print(f"[KW] Jina erro: {e}")
+    except Exception:
+        print("[KW] Jina erro")
         return ""
 
 

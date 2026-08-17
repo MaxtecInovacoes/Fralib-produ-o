@@ -5,7 +5,6 @@ plan that decides information architecture, section roles, media policy,
 style guide, motion and SEO before HTML is generated.
 """
 
-from __future__ import annotations
 
 from typing import Any
 

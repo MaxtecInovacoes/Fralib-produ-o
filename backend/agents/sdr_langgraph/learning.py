@@ -4,7 +4,6 @@ This module does not train a model. It promotes useful corrections and quality
 signals into small reusable lessons that are injected into future SDR prompts.
 """
 
-from __future__ import annotations
 
 import json
 import os

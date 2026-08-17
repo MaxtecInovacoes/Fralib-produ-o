@@ -47,9 +47,9 @@
     "backend/endpoints/whatsapp_endpoints.py"
   ],
   "missing_entrypoints": [],
-  "total_scanned_files": 441,
+  "total_scanned_files": 442,
   "active_core_files_count": 45,
-  "orphaned_files_count": 396,
+  "orphaned_files_count": 397,
   "active_files_by_layer": {
     "LAYER_1_CORE_DATABASE": [
       "backend/endpoints/auth_endpoints.py"
@@ -112,40 +112,10 @@
   },
   "health_summary": {
     "clean_files_count": 13,
-    "warning_files_count": 29,
-    "critical_files_count": 3
+    "warning_files_count": 32,
+    "critical_files_count": 0
   },
   "top_priority_files_to_fix": [
-    {
-      "file_path": "backend/endpoints/credits_endpoints.py",
-      "layer": "LAYER_4_LEAD_SUPPLY",
-      "critical_issues_count": 1,
-      "warning_issues_count": 1,
-      "issue_types": [
-        "ASYNC_DB_SYNC_MISMATCH",
-        "IMPORT_DUPLICATED"
-      ]
-    },
-    {
-      "file_path": "backend/endpoints/whatsapp_endpoints.py",
-      "layer": "LAYER_5_ACTIVE_ROUTES",
-      "critical_issues_count": 1,
-      "warning_issues_count": 1,
-      "issue_types": [
-        "ASYNC_DB_SYNC_MISMATCH",
-        "IMPORT_DUPLICATED"
-      ]
-    },
-    {
-      "file_path": "openui-service-wandb/backend/openui/server.py",
-      "layer": "LAYER_3_AI_AGENTS",
-      "critical_issues_count": 1,
-      "warning_issues_count": 1,
-      "issue_types": [
-        "ASYNC_DB_SYNC_MISMATCH",
-        "IMPORT_DUPLICATED"
-      ]
-    },
     {
       "file_path": "backend/endpoints/pipeline_endpoints.py",
       "layer": "LAYER_2_PIPELINE_ENGINE",
@@ -289,6 +259,15 @@
       ]
     },
     {
+      "file_path": "backend/endpoints/credits_endpoints.py",
+      "layer": "LAYER_4_LEAD_SUPPLY",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
       "file_path": "backend/endpoints/dashboard_endpoints.py",
       "layer": "LAYER_5_ACTIVE_ROUTES",
       "critical_issues_count": 0,
@@ -300,6 +279,24 @@
     {
       "file_path": "backend/endpoints/falhas_endpoints.py",
       "layer": "LAYER_5_ACTIVE_ROUTES",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/franz_insights_endpoints.py",
+      "layer": "LAYER_3_AI_AGENTS",
+      "critical_issues_count": 0,
+      "warning_issues_count": 1,
+      "issue_types": [
+        "IMPORT_DUPLICATED"
+      ]
+    },
+    {
+      "file_path": "backend/endpoints/lead_supply_endpoints.py",
+      "layer": "LAYER_4_LEAD_SUPPLY",
       "critical_issues_count": 0,
       "warning_issues_count": 1,
       "issue_types": [
@@ -531,21 +528,16 @@
     },
     "backend/endpoints/credits_endpoints.py": {
       "layer": "LAYER_4_LEAD_SUPPLY",
-      "size_bytes": 16172,
+      "size_bytes": 16279,
       "has_fastapi_router": true,
       "issues": [
-        {
-          "rule": "ASYNC_DB_SYNC_MISMATCH",
-          "severity": "critical",
-          "detail": "async def 'criar_portal_session' accesses session/DB synchronously"
-        },
         {
           "rule": "IMPORT_DUPLICATED",
           "severity": "warning",
           "detail": "duplicated top-level imports: ['database', 'sqlalchemy']"
         }
       ],
-      "issue_count": 2,
+      "issue_count": 1,
       "incoming": []
     },
     "backend/endpoints/cron_endpoints.py": {
@@ -837,21 +829,16 @@
     },
     "backend/endpoints/whatsapp_endpoints.py": {
       "layer": "LAYER_5_ACTIVE_ROUTES",
-      "size_bytes": 7766,
+      "size_bytes": 7573,
       "has_fastapi_router": true,
       "issues": [
-        {
-          "rule": "ASYNC_DB_SYNC_MISMATCH",
-          "severity": "critical",
-          "detail": "async def '_get_session' accesses session/DB synchronously"
-        },
         {
           "rule": "IMPORT_DUPLICATED",
           "severity": "warning",
           "detail": "duplicated top-level imports: ['sqlalchemy']"
         }
       ],
-      "issue_count": 2,
+      "issue_count": 1,
       "incoming": []
     },
     "backend/pipeline_ledger.py": {
@@ -926,21 +913,16 @@
     },
     "openui-service-wandb/backend/openui/server.py": {
       "layer": "LAYER_3_AI_AGENTS",
-      "size_bytes": 21222,
+      "size_bytes": 21435,
       "has_fastapi_router": true,
       "issues": [
         {
-          "rule": "ASYNC_DB_SYNC_MISMATCH",
-          "severity": "critical",
-          "detail": "async def 'chat_completions' accesses session/DB synchronously"
-        },
-        {
           "rule": "IMPORT_DUPLICATED",
           "severity": "warning",
-          "detail": "duplicated top-level imports: ['contextlib', 'fastapi', 'ollama', 'openai', 'util']"
+          "detail": "duplicated top-level imports: ['fastapi', 'ollama', 'openai', 'util']"
         }
       ],
-      "issue_count": 2,
+      "issue_count": 1,
       "incoming": []
     },
     "server.py": {
@@ -960,6 +942,49 @@
   },
   "orphaned_files": [
     ".git/hooks/check_v11_protection.py",
+    "_quarantine_legacy/backend/api_monitor.py",
+    "_quarantine_legacy/backend/domain/__init__.py",
+    "_quarantine_legacy/backend/eval/__init__.py",
+    "_quarantine_legacy/backend/eval/runner.py",
+    "_quarantine_legacy/backend/eval/schemas.py",
+    "_quarantine_legacy/backend/integration_healthcheck.py",
+    "_quarantine_legacy/backend/observability.py",
+    "_quarantine_legacy/backend/prd_cache.py",
+    "_quarantine_legacy/backend/shared/password.py",
+    "_quarantine_legacy/lead-pipeline/outreach/config.py",
+    "_quarantine_legacy/lead-pipeline/outreach/config_reply.py",
+    "_quarantine_legacy/lead-pipeline/outreach/pitch_sender.py",
+    "_quarantine_legacy/lead-pipeline/outreach/reply_checker.py",
+    "_quarantine_legacy/lead-pipeline/scraper/apify_scraper.py",
+    "_quarantine_legacy/lead-pipeline/scraper/config.py",
+    "_quarantine_legacy/lead-pipeline/sheets/google_sheets.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/agent-message/src/agent_message/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/agent-observe/src/agent_observe/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/attach_image.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/compact/src/compact/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/edit/src/edit/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/goal/src/goal/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/linear/src/linear/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/notion/src/notion/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/refine/src/refine/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/rlm-heartbeat/src/rlm_heartbeat/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/websearch/src/websearch/__init__.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/skills/websearch/src/websearch/websearch.py",
+    "_quarantine_legacy/prime-agent/packages/coding-agent/test/fixtures/skills/python-skill/src/python_skill/__init__.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/__init__.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/harness.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/mcp_base.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/skill.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_agent_message_skill.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_harness.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_mcp_base.py",
+    "_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_subagent_registry.py",
+    "_quarantine_legacy/prime-agent/scripts/render-logo.py",
+    "_quarantine_legacy/run_final_analysis.py",
+    "_quarantine_legacy/tmp_reprocess_start_academia.py",
+    "_quarantine_legacy/worker.py",
+    "_quarantine_orphans.py",
     "alembic/env.py",
     "alembic/versions/b278e17c0c0c_initial_schema.py",
     "alembic/versions/baseline_real_prod.py",
@@ -1096,7 +1121,6 @@
     "backend/agents/visual_contract.py",
     "backend/agents/visual_contract_gate.py",
     "backend/agents/visual_fingerprint.py",
-    "backend/api_monitor.py",
     "backend/config.py",
     "backend/core/access_control.py",
     "backend/core/alerting.py",
@@ -1122,19 +1146,12 @@
     "backend/core/retry_helper.py",
     "backend/core/router_setup.py",
     "backend/core/schema_init.py",
-    "backend/domain/__init__.py",
     "backend/domain/llm_pricing.py",
     "backend/domain/plans.py",
     "backend/endpoints/credits/__init__.py",
     "backend/endpoints/credits/checkout.py",
     "backend/endpoints/credits/status.py",
     "backend/endpoints/credits/webhook_cakto.py",
-    "backend/eval/__init__.py",
-    "backend/eval/runner.py",
-    "backend/eval/schemas.py",
-    "backend/integration_healthcheck.py",
-    "backend/observability.py",
-    "backend/prd_cache.py",
     "backend/schemas/__init__.py",
     "backend/schemas/pipeline.py",
     "backend/schemas/pipeline_trigger.py",
@@ -1196,7 +1213,6 @@
     "backend/services/vite_renderer_models.py",
     "backend/services/vite_templates.py",
     "backend/services/vite_validator.py",
-    "backend/shared/password.py",
     "backend/utils/agente1_hunter_v2.py",
     "backend/utils/espionar_concorrencia.py",
     "backend/utils/google_local_scraper.py",
@@ -1212,13 +1228,6 @@
     "backend/utils/validation_layer.py",
     "frontend/build.py",
     "frontend/build_admin.py",
-    "lead-pipeline/outreach/config.py",
-    "lead-pipeline/outreach/config_reply.py",
-    "lead-pipeline/outreach/pitch_sender.py",
-    "lead-pipeline/outreach/reply_checker.py",
-    "lead-pipeline/scraper/apify_scraper.py",
-    "lead-pipeline/scraper/config.py",
-    "lead-pipeline/sheets/google_sheets.py",
     "map_critical_core.py",
     "openui-service-wandb/backend/.venv/Lib/site-packages/_virtualenv.py",
     "openui-service-wandb/backend/.venv/Scripts/activate_this.py",
@@ -1253,30 +1262,6 @@
     "openui-service-wandb/backend/openui/util/screenshots.py",
     "openui-service-wandb/backend/openui/util/storage.py",
     "openui-service-wandb/backend/tests/test_openui.py",
-    "prime-agent/packages/coding-agent/skills/agent-message/src/agent_message/__init__.py",
-    "prime-agent/packages/coding-agent/skills/agent-observe/src/agent_observe/__init__.py",
-    "prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/__init__.py",
-    "prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/attach_image.py",
-    "prime-agent/packages/coding-agent/skills/compact/src/compact/__init__.py",
-    "prime-agent/packages/coding-agent/skills/edit/src/edit/__init__.py",
-    "prime-agent/packages/coding-agent/skills/goal/src/goal/__init__.py",
-    "prime-agent/packages/coding-agent/skills/linear/src/linear/__init__.py",
-    "prime-agent/packages/coding-agent/skills/notion/src/notion/__init__.py",
-    "prime-agent/packages/coding-agent/skills/refine/src/refine/__init__.py",
-    "prime-agent/packages/coding-agent/skills/rlm-heartbeat/src/rlm_heartbeat/__init__.py",
-    "prime-agent/packages/coding-agent/skills/websearch/src/websearch/__init__.py",
-    "prime-agent/packages/coding-agent/skills/websearch/src/websearch/websearch.py",
-    "prime-agent/packages/coding-agent/test/fixtures/skills/python-skill/src/python_skill/__init__.py",
-    "prime-agent/prime-agent-runtime/src/rlm/__init__.py",
-    "prime-agent/prime-agent-runtime/src/rlm/harness.py",
-    "prime-agent/prime-agent-runtime/src/rlm/mcp_base.py",
-    "prime-agent/prime-agent-runtime/src/rlm/skill.py",
-    "prime-agent/prime-agent-runtime/test/test_agent_message_skill.py",
-    "prime-agent/prime-agent-runtime/test/test_harness.py",
-    "prime-agent/prime-agent-runtime/test/test_mcp_base.py",
-    "prime-agent/prime-agent-runtime/test/test_subagent_registry.py",
-    "prime-agent/scripts/render-logo.py",
-    "run_final_analysis.py",
     "scripts/check_leads.py",
     "scripts/check_pipeline_data.py",
     "scripts/checks/check_crm.py",
@@ -1352,8 +1337,6 @@
     "tests/unit/test_pipeline_runtime_contracts.py",
     "tests/unit/test_utils.py",
     "tests/unit/test_visual_fingerprint_quality_gates.py",
-    "tests/unit/test_worker_payload_context.py",
-    "tmp_reprocess_start_academia.py",
-    "worker.py"
+    "tests/unit/test_worker_payload_context.py"
   ]
 }

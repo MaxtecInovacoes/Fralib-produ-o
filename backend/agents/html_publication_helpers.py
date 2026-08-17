@@ -8,7 +8,6 @@ Provides utility functions for:
 - Business data extraction
 """
 
-from __future__ import annotations
 
 import datetime
 import html as _html

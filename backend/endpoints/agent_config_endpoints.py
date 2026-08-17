@@ -3,8 +3,6 @@ CRUD de configuração de agentes (modelo, provider, params) + Playground A/B + 
 Restrito a superadmin.
 """
 import time
-import json
-import requests
 import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -354,7 +352,6 @@ async def run_pipeline_sandbox(body: dict, db: Session = Depends(get_db), user=D
         # FASE 3: Theo — briefing estratégico
         t0 = time.time()
         try:
-            from agents.llm_router import call_llm
             theo_cfg = models_override.get('theo', {})
             theo_provider = theo_cfg.get('provider', 'anthropic')
             theo_model = theo_cfg.get('model_id', 'claude-sonnet-4-6')

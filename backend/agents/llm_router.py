@@ -16,9 +16,7 @@ Uso:
     text, usage = call_llm_direct("openai", "gpt-4o", system, user)
 """
 
-from __future__ import annotations
 
-import json
 import os
 import time as _time
 import threading as _threading
@@ -265,7 +263,6 @@ def _try_anthropic_call(
     api_key: str, base_url: str,
 ) -> tuple[str, dict]:
     """Chamada única ao Messages API."""
-    import requests
 
     url = f"{base_url}/v1/messages"
     headers = {
@@ -313,7 +310,6 @@ def _call_openai(
     if not api_key:
         raise Exception(f"Nenhuma API key {provider} disponível")
 
-    import requests
 
     url = f"{base_url}/chat/completions"
     headers = {

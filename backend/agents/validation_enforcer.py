@@ -14,7 +14,6 @@ class ResourceNotUsedError(Exception):
 
 def require_rag(agent_name: str):
     def decorator(func):
-        import functools
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
             from agent_rag import check_rag_usage, reset_rag_tracker
@@ -29,7 +28,6 @@ def require_rag(agent_name: str):
         
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
-            from agent_rag import check_rag_usage, reset_rag_tracker
             reset_rag_tracker(agent_name)
             result = func(*args, **kwargs)
             rag_used = check_rag_usage(agent_name)
@@ -39,7 +37,6 @@ def require_rag(agent_name: str):
                 print(f"[Validation] OK {agent_name}: RAG verificado e ativo")
             return result
         
-        import inspect
         if inspect.iscoroutinefunction(func):
             return async_wrapper
         else:
@@ -92,19 +89,16 @@ def validate_imports():
     Valida que módulos críticos estão disponíveis
     """
     try:
-        import agent_rag  # noqa: F401
         print("[Validation] OK agent_rag disponivel")
     except ImportError as exc:
         print(f"[Validation] WARN agent_rag nao encontrado: {exc}")
 
     try:
-        from skill_loader import carregar_skills, get_skills_agente
         print("[Validation] OK skill_loader disponivel")
     except ImportError as e:
         print(f"[Validation] WARN skill_loader nao encontrado: {e}")
 
     try:
-        from design_guidelines import ANIMATION_PRINCIPLES, ANIMATION_CSS
         print("[Validation] OK design_guidelines disponivel")
     except ImportError as e:
         print(f"[Validation] WARN design_guidelines nao encontrado: {e}")

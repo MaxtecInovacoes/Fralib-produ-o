@@ -250,7 +250,6 @@ def _buscar_com_playwright(
 
 def _buscar_concorrentes_google(nicho: str, cidade: str) -> list:
     """Busca URLs de concorrentes via Jina Search."""
-    import requests
 
     query = f"melhor {nicho} {cidade} site oficial"
     headers = {"X-Return-Format": "markdown", "X-Timeout": "15"}

@@ -6,9 +6,7 @@ o SDR chama handoff_to_closer() que:
 2. Notifica o closer via WhatsApp (mensagem separada, NAO no chat do lead)
 3. Marca o lead como is_human_takeover=True
 """
-from __future__ import annotations
 
-import json
 import logging
 import os
 from typing import Any, Optional

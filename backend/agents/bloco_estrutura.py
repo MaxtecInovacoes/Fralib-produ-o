@@ -4,7 +4,6 @@ Retorno: Markdown parseado via markdown_prd_parser.
 """
 
 import re as _re
-import os
 from backend.agents.llm_direct import call_claude
 from backend.agents.markdown_prd_parser import parse_bloco1_markdown
 from prompts_arquiteto import (

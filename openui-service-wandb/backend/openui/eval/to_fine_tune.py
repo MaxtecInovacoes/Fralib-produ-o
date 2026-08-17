@@ -151,7 +151,7 @@ def main():
                         print(f"Skipping {name}, {output_tokens:,}")
                         continue
                     emoji = comp["emojis"][i]
-                    answer = """---
+                    answer = F"""---
     name: {name}
     emoji: {emoji}
     ---

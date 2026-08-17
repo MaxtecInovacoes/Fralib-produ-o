@@ -55,7 +55,6 @@ def _fetch_limits():
             'pipelines_available': 0,
             'alert': {'level': 'rate_limit', 'msg': f'Limite atingido! Volte daqui {reset_min} minuto(s).'},
         }
-        import time as _time
         _usage_cache['data'] = result_429
         _usage_cache['ts'] = _time.time()
         return result_429
@@ -97,7 +96,6 @@ def _fetch_limits():
         'pipelines_available': pipelines,
         'alert': alert,
     }
-    import time as _time
     _usage_cache['data'] = result
     _usage_cache['ts'] = _time.time()
     return result
@@ -133,7 +131,6 @@ async def api_usage_status(usuario: dict = Depends(get_current_user)):
 async def api_usage_history(usuario: dict = Depends(get_current_user)):
     """Retorna historico de snapshots das ultimas 24h."""
     if usuario.get('role') not in ('admin', 'superadmin'):
-        from fastapi import HTTPException
         raise HTTPException(403, 'Apenas admins')
     try:
         with engine.connect() as conn:

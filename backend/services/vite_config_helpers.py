@@ -9,11 +9,9 @@ Responsabilidades:
 
 Este módulo contém apenas funções puras de leitura - sem side effects.
 """
-from __future__ import annotations
 
 import os
 import re
-from typing import Any
 
 # =============================================================================
 # CONFIG GETTERS

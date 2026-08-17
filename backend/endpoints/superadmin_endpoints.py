@@ -8,6 +8,8 @@ import json
 import os
 from datetime import datetime, timedelta
 from core.config import is_superadmin
+from backend.schemas.superadmin import SetPlanRequest, SetCreditsRequest
+from backend.services.admin_user_service import set_user_plan, set_user_creditos
 
 router = APIRouter(prefix='/api/superadmin', tags=['superadmin'])
 
@@ -46,7 +48,7 @@ def _audit(db, actor, action, target_user_id, target_id=None, metadata=None, req
 
 
 @router.get("/metrics")
-async def get_metrics(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def get_metrics(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Metricas gerais do sistema"""
     try:
         # Total de usuarios
@@ -141,7 +143,7 @@ async def get_metrics(db: Session = Depends(get_db), user: dict = Depends(requir
 
 
 @router.get("/users")
-async def list_users(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def list_users(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Lista todos os usuarios com dados de consumo"""
     try:
         rows = db.execute(text("""
@@ -194,7 +196,7 @@ async def list_users(db: Session = Depends(get_db), user: dict = Depends(require
 
 
 @router.post("/users/{user_id}/toggle")
-async def toggle_user(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def toggle_user(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Ativar/desativar usuario"""
     try:
         row = db.execute(text("SELECT status, email FROM users WHERE id = :id"), {"id": user_id}).fetchone()
@@ -220,24 +222,13 @@ async def toggle_user(user_id: int, request: Request, db: Session = Depends(get_
 
 
 @router.post("/users/{user_id}/set-plan")
-async def set_plan(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def set_plan(user_id: int, request: Request, body: SetPlanRequest, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Alterar plano do usuario - recebe JSON {plano: 'trial'|'starter'|'pro'}"""
     try:
-        body = await request.json()
-        plano = body.get("plano", "trial")
+        plano = body.plano
         if plano not in ("trial", "starter", "pro", "ilimitado", "beta", "admin"):
             raise HTTPException(status_code=400, detail="Plano invalido")
-        
-        row = db.execute(text("SELECT id FROM users WHERE id = :id"), {"id": user_id}).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
-        
-        plano_pago = plano in ("starter", "pro", "beta", "ilimitado")
-        status_novo = "ativo" if plano_pago else plano
-        db.execute(text(
-            "UPDATE users SET plano = :plano, plano_pago = :pago, status = :status WHERE id = :id"
-        ), {"plano": plano, "pago": plano_pago, "status": status_novo, "id": user_id})
-        db.commit()
+        status_novo, plano_pago = set_user_plan(db, user_id, plano)
 
         _audit(db, user, "set_plan", user_id, target_id=user_id,
                metadata={"plano": plano, "plano_pago": plano_pago}, request=request)
@@ -245,26 +236,19 @@ async def set_plan(user_id: int, request: Request, db: Session = Depends(get_db)
         return {"ok": True, "plano": plano, "user_id": user_id}
     except HTTPException:
         raise
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/users/{user_id}/set-creditos")
-async def set_creditos(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def set_creditos(user_id: int, request: Request, body: SetCreditsRequest, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Definir creditos do usuario - recebe JSON {creditos: N}"""
     try:
-        body = await request.json()
-        creditos = int(body.get("creditos", 0))
-        
-        row = db.execute(text("SELECT id FROM users WHERE id = :id"), {"id": user_id}).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Usuario nao encontrado")
-        
-        db.execute(text(
-            "UPDATE users SET creditos = :c, creditos_max = :c WHERE id = :id"
-        ), {"c": creditos, "id": user_id})
-        db.commit()
+        creditos = int(body.creditos)
+        set_user_creditos(db, user_id, creditos)
 
         _audit(db, user, "set_creditos", user_id, target_id=user_id,
                metadata={"creditos": creditos}, request=request)
@@ -272,13 +256,15 @@ async def set_creditos(user_id: int, request: Request, db: Session = Depends(get
         return {"ok": True, "creditos": creditos, "user_id": user_id}
     except HTTPException:
         raise
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/impersonate/{user_id}")
-async def impersonate(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def impersonate(user_id: int, request: Request, db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Logar como outro usuario"""
     try:
         row = db.execute(text("SELECT id, email, role FROM users WHERE id = :id"), {"id": user_id}).fetchone()
@@ -308,7 +294,7 @@ async def impersonate(user_id: int, request: Request, db: Session = Depends(get_
 
 
 @router.get("/usage")
-async def get_usage(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), periodo: str = "48h"):
+def get_usage(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), periodo: str = "48h"):
     """Consumo de tokens por hora e por agente. Periodo: 24h, 48h, 7d, 30d"""
     try:
         # Whitelist estrita: periodo -> (hours_interval, granularidade)
@@ -409,7 +395,7 @@ def _calcular_custo(modelo: str, input_tokens: int, output_tokens: int) -> float
 
 
 @router.get("/dashboard/overview")
-async def dashboard_overview(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def dashboard_overview(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """KPIs principais: 24h, 7d, 30d"""
     try:
         exec_row = db.execute(text("""
@@ -465,7 +451,7 @@ async def dashboard_overview(db: Session = Depends(get_db), user: dict = Depends
 
 
 @router.get("/dashboard/costs")
-async def dashboard_costs(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+def dashboard_costs(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
                           period: str = "7d", group_by: str = "day"):
     """Breakdown de custos. group_by: day, agent, model, segmento"""
     PERIODS = {"24h": 24, "7d": 168, "30d": 720}
@@ -535,7 +521,7 @@ async def dashboard_costs(db: Session = Depends(get_db), user: dict = Depends(re
 
 
 @router.get("/dashboard/costs/projection")
-async def costs_projection(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def costs_projection(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Projeção de custo mensal baseado nos últimos 7 dias."""
     try:
         row = db.execute(text("""
@@ -557,7 +543,7 @@ async def costs_projection(db: Session = Depends(get_db), user: dict = Depends(r
 
 
 @router.get("/dashboard/pipeline")
-async def dashboard_pipeline(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+def dashboard_pipeline(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
                              period: str = "7d"):
     """Performance do pipeline: taxa sucesso, falhas por fase, tempo por fase."""
     PERIODS = {"24h": 24, "7d": 168, "30d": 720}
@@ -603,7 +589,7 @@ async def dashboard_pipeline(db: Session = Depends(get_db), user: dict = Depends
 
 
 @router.get("/dashboard/health")
-async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Status de saúde de todos os serviços."""
     health = {}
 
@@ -647,7 +633,7 @@ async def dashboard_health(db: Session = Depends(get_db), user: dict = Depends(r
 
 
 @router.get("/dashboard/alerts")
-async def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
+def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(require_superadmin)):
     """Alertas ativos baseados em regras."""
     alerts = []
 
@@ -689,7 +675,6 @@ async def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(r
                                "message": f"Nenhum worker ativo com {pending} jobs pendentes"})
 
         try:
-            import psutil
             disk = psutil.disk_usage('/').percent
             if disk > 90:
                 alerts.append({"severity": "warning", "rule": "disk_alto",
@@ -704,7 +689,7 @@ async def dashboard_alerts(db: Session = Depends(get_db), user: dict = Depends(r
 
 
 @router.get("/dashboard/rate-limits")
-async def dashboard_rate_limits(user: dict = Depends(require_superadmin)):
+def dashboard_rate_limits(user: dict = Depends(require_superadmin)):
     """Status completo do rate limiting: budget, keys, calls/min, top tenants."""
     try:
         import ia_manager
@@ -714,7 +699,7 @@ async def dashboard_rate_limits(user: dict = Depends(require_superadmin)):
 
 
 @router.get("/dashboard/jobs/failed")
-async def dashboard_jobs_failed(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+def dashboard_jobs_failed(db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
                                 limit: int = 20):
     """Jobs falhados com detalhes para replay."""
     try:
@@ -735,7 +720,7 @@ async def dashboard_jobs_failed(db: Session = Depends(get_db), user: dict = Depe
 
 
 @router.post("/dashboard/jobs/{job_id}/replay")
-async def replay_job(job_id: int, db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
+def replay_job(job_id: int, db: Session = Depends(get_db), user: dict = Depends(require_superadmin),
                      request: Request = None):
     """Reprocessar job falhado — volta pra fila como pending."""
     try:
@@ -757,7 +742,7 @@ async def replay_job(job_id: int, db: Session = Depends(get_db), user: dict = De
 
 
 @router.post("/dashboard/queue/pause")
-async def pause_queue(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), request: Request = None):
+def pause_queue(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), request: Request = None):
     """Pausa fila — adia todos pending em 24h."""
     try:
         db.execute(text("""
@@ -772,7 +757,7 @@ async def pause_queue(db: Session = Depends(get_db), user: dict = Depends(requir
 
 
 @router.post("/dashboard/queue/resume")
-async def resume_queue(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), request: Request = None):
+def resume_queue(db: Session = Depends(get_db), user: dict = Depends(require_superadmin), request: Request = None):
     """Retoma fila — libera jobs adiados."""
     try:
         db.execute(text("UPDATE jobs SET next_retry_at = NOW() WHERE status='pending' AND next_retry_at > NOW()"))

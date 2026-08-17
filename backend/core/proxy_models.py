@@ -1,6 +1,5 @@
 """Canonical LiteLLM model policy for FraLib agents."""
 
-from __future__ import annotations
 
 import os
 

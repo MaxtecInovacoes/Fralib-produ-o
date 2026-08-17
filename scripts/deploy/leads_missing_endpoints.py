@@ -1,12 +1,10 @@
 """Adiciona endpoints faltantes do admin: escalados, conversas-ativas, assumir, pipeline-analytics."""
-import os
 import sys
 
 sys.path.append("/opt/fralib/backend")
 sys.path.append("/opt/fralib/backend/core")
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 

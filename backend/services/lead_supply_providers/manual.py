@@ -1,6 +1,5 @@
 """Manual/manual provider for lead supply engine."""
 
-from __future__ import annotations
 
 from typing import Any
 

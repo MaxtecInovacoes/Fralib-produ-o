@@ -1,10 +1,8 @@
 """Deterministic visual fingerprint for generated landing pages."""
 
-from __future__ import annotations
 
 import hashlib
 import re
-from collections import Counter
 from typing import Any
 
 

@@ -1,6 +1,5 @@
 """Runtime flags for the pipeline orchestration flow."""
 
-from __future__ import annotations
 
 import os
 

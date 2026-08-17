@@ -5,7 +5,6 @@ Queue Status Endpoints — Métricas e status da fila de jobs
 from fastapi import APIRouter, Query, Depends
 from sqlalchemy import text
 from database import engine, get_db
-from sqlalchemy.orm import Session
 from auth import get_current_user
 
 router = APIRouter(prefix='/api/queue', tags=['queue'])

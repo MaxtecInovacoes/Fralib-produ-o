@@ -1,10 +1,10 @@
 # FraLib Critical Core Audit
 > Read-only. No files modified.
 
-- **Scanned**: 441 .py files
+- **Scanned**: 442 .py files
 - **Active**: 45
-- **Orphaned**: 396
-- **Clean**: 13 · **Warning**: 29 · **Critical**: 3
+- **Orphaned**: 397
+- **Clean**: 13 · **Warning**: 32 · **Critical**: 0
 
 ## Discovered Entrypoints
 
@@ -70,10 +70,10 @@
 - `backend/endpoints/agent_config_endpoints.py`
 - `backend/endpoints/agentes_endpoints.py`
 - `backend/endpoints/franz_insights_endpoints.py`
-- `openui-service-wandb/backend/openui/server.py` 🚩
+- `openui-service-wandb/backend/openui/server.py`
 
 ### LAYER_4_LEAD_SUPPLY (5)
-- `backend/endpoints/credits_endpoints.py` 🚩
+- `backend/endpoints/credits_endpoints.py`
 - `backend/endpoints/lead_supply_endpoints.py`
 - `backend/endpoints/provider_alerts_endpoints.py`
 - `backend/endpoints/provider_keys_endpoints.py`
@@ -97,7 +97,7 @@
 - `backend/endpoints/superadmin_endpoints.py`
 - `backend/endpoints/tracking_endpoints.py`
 - `backend/endpoints/users_endpoints.py`
-- `backend/endpoints/whatsapp_endpoints.py` 🚩
+- `backend/endpoints/whatsapp_endpoints.py`
 
 ### LAYER_6_SCHEMAS_CONTRACTS (0)
 
@@ -112,21 +112,6 @@
 
 
 ## Top Priority Fixes
-
-### backend/endpoints/credits_endpoints.py
-- Layer: LAYER_4_LEAD_SUPPLY
-- Critical: 1 · Warning: 1
-- Issues: ASYNC_DB_SYNC_MISMATCH, IMPORT_DUPLICATED
-
-### backend/endpoints/whatsapp_endpoints.py
-- Layer: LAYER_5_ACTIVE_ROUTES
-- Critical: 1 · Warning: 1
-- Issues: ASYNC_DB_SYNC_MISMATCH, IMPORT_DUPLICATED
-
-### openui-service-wandb/backend/openui/server.py
-- Layer: LAYER_3_AI_AGENTS
-- Critical: 1 · Warning: 1
-- Issues: ASYNC_DB_SYNC_MISMATCH, IMPORT_DUPLICATED
 
 ### backend/endpoints/pipeline_endpoints.py
 - Layer: LAYER_2_PIPELINE_ENGINE
@@ -203,6 +188,11 @@
 - Critical: 0 · Warning: 1
 - Issues: HTML_FRAGILE_REGEX
 
+### backend/endpoints/credits_endpoints.py
+- Layer: LAYER_4_LEAD_SUPPLY
+- Critical: 0 · Warning: 1
+- Issues: IMPORT_DUPLICATED
+
 ### backend/endpoints/dashboard_endpoints.py
 - Layer: LAYER_5_ACTIVE_ROUTES
 - Critical: 0 · Warning: 1
@@ -213,10 +203,63 @@
 - Critical: 0 · Warning: 1
 - Issues: IMPORT_DUPLICATED
 
+### backend/endpoints/franz_insights_endpoints.py
+- Layer: LAYER_3_AI_AGENTS
+- Critical: 0 · Warning: 1
+- Issues: IMPORT_DUPLICATED
+
+### backend/endpoints/lead_supply_endpoints.py
+- Layer: LAYER_4_LEAD_SUPPLY
+- Critical: 0 · Warning: 1
+- Issues: IMPORT_DUPLICATED
+
 
 ## Orphaned Files (first 100)
 
 - `.git/hooks/check_v11_protection.py`
+- `_quarantine_legacy/backend/api_monitor.py`
+- `_quarantine_legacy/backend/domain/__init__.py`
+- `_quarantine_legacy/backend/eval/__init__.py`
+- `_quarantine_legacy/backend/eval/runner.py`
+- `_quarantine_legacy/backend/eval/schemas.py`
+- `_quarantine_legacy/backend/integration_healthcheck.py`
+- `_quarantine_legacy/backend/observability.py`
+- `_quarantine_legacy/backend/prd_cache.py`
+- `_quarantine_legacy/backend/shared/password.py`
+- `_quarantine_legacy/lead-pipeline/outreach/config.py`
+- `_quarantine_legacy/lead-pipeline/outreach/config_reply.py`
+- `_quarantine_legacy/lead-pipeline/outreach/pitch_sender.py`
+- `_quarantine_legacy/lead-pipeline/outreach/reply_checker.py`
+- `_quarantine_legacy/lead-pipeline/scraper/apify_scraper.py`
+- `_quarantine_legacy/lead-pipeline/scraper/config.py`
+- `_quarantine_legacy/lead-pipeline/sheets/google_sheets.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/agent-message/src/agent_message/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/agent-observe/src/agent_observe/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/attach-image/src/attach_image/attach_image.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/compact/src/compact/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/edit/src/edit/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/goal/src/goal/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/linear/src/linear/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/notion/src/notion/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/refine/src/refine/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/rlm-heartbeat/src/rlm_heartbeat/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/websearch/src/websearch/__init__.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/skills/websearch/src/websearch/websearch.py`
+- `_quarantine_legacy/prime-agent/packages/coding-agent/test/fixtures/skills/python-skill/src/python_skill/__init__.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/__init__.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/harness.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/mcp_base.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/src/rlm/skill.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_agent_message_skill.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_harness.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_mcp_base.py`
+- `_quarantine_legacy/prime-agent/prime-agent-runtime/test/test_subagent_registry.py`
+- `_quarantine_legacy/prime-agent/scripts/render-logo.py`
+- `_quarantine_legacy/run_final_analysis.py`
+- `_quarantine_legacy/tmp_reprocess_start_academia.py`
+- `_quarantine_legacy/worker.py`
+- `_quarantine_orphans.py`
 - `alembic/env.py`
 - `alembic/versions/b278e17c0c0c_initial_schema.py`
 - `alembic/versions/baseline_real_prod.py`
@@ -273,50 +316,7 @@
 - `backend/agents/html_phase6_repair.py`
 - `backend/agents/html_publication_helpers.py`
 - `backend/agents/html_quality_gate.py`
-- `backend/agents/hunter/__init__.py`
-- `backend/agents/hunter/agent.py`
-- `backend/agents/jina_research.py`
-- `backend/agents/keyword_research.py`
-- `backend/agents/lgpd_personalized.py`
-- `backend/agents/liam_agent_loop.py`
-- `backend/agents/liz.py`
-- `backend/agents/liz_rubricas.py`
-- `backend/agents/llm_agent_config.py`
-- `backend/agents/llm_anthropic.py`
-- `backend/agents/llm_client.py`
-- `backend/agents/llm_config.py`
-- `backend/agents/llm_context.py`
-- `backend/agents/llm_direct.py`
-- `backend/agents/llm_openai.py`
-- `backend/agents/llm_providers.py`
-- `backend/agents/llm_router.py`
-- `backend/agents/llm_tracking.py`
-- `backend/agents/manager/states.py`
-- `backend/agents/manager/step_arquiteto.py`
-- `backend/agents/manager/step_builder.py`
-- `backend/agents/manager/step_caio.py`
-- `backend/agents/manager/step_deploy.py`
-- `backend/agents/manager/step_design_director.py`
-- `backend/agents/manager/step_franz.py`
-- `backend/agents/manager/step_hunter.py`
-- `backend/agents/manager/step_nicho.py`
-- `backend/agents/manager/step_quality_gate.py`
-- `backend/agents/manager/step_variacao.py`
-- `backend/agents/markdown_prd_parser.py`
-- `backend/agents/memory.py`
-- `backend/agents/niche_resolver.py`
-- `backend/agents/nicho_data.py`
-- `backend/agents/open_design_selector.py`
-- `backend/agents/pexels_video.py`
-- `backend/agents/pipeline_checkpoint.py`
-- `backend/agents/pipeline_identity.py`
-- `backend/agents/pipeline_learning.py`
-- `backend/agents/prompt_agent_builder.py`
-- `backend/agents/prompt_agent_context.py`
-- `backend/agents/prompt_agent_helpers.py`
-- `backend/agents/prompts_arquiteto.py`
-- `backend/agents/requirements_contract.py`
-- … and 296 more (see JSON)
+- … and 297 more (see JSON)
 
 ---
 Generated: critical_core_report.json + critical_core_report.md

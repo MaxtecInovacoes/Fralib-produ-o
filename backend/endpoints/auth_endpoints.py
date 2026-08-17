@@ -23,7 +23,7 @@ def _inicializar_tenant(db: Session, user_id: int, nome: str, email: str, now: s
     - Licença trial na tabela licencas
     - Config pipeline padrão
     """
-    import os, secrets, shutil, pwd, stat
+    import shutil, pwd, stat
 
     # 1. Criar diretório de sites do tenant (user_id forcado a int para evitar path injection)
     safe_uid = int(user_id)
@@ -109,14 +109,14 @@ class RegisterRequest(BaseModel):
     name: str = ""
     telefone: str = ""
 
-def create_access_token(data: dict):
+def _create_access_token(data: dict):
     to_encode = data.copy()
     to_encode.update({"exp": datetime.utcnow() + timedelta(hours=24)})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
-async def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
     user = db.execute(text(
         "SELECT id, email, password_hash, status, email_confirmado FROM users WHERE LOWER(email) = LOWER(:email)"
     ), {"email": data.email}).fetchone()
@@ -131,7 +131,7 @@ async def login(request: Request, data: LoginRequest, db: Session = Depends(get_
             detail="Email nao confirmado. Verifique sua caixa de entrada ou solicite reenvio.",
             headers={"X-Require-Email-Confirmation": "1"},
         )
-    token = create_access_token({"sub": str(user[0]), "email": user[1]})
+    token = _create_access_token({"sub": str(user[0]), "email": user[1]})
     return TokenResponse(access_token=token)
 
 @router.post("/register")
@@ -208,7 +208,7 @@ def _pagina_confirmacao(titulo: str, mensagem: str, sucesso: bool) -> HTMLRespon
 
 
 @router.get("/confirmar-email")
-async def confirmar_email(token: str, db: Session = Depends(get_db)):
+def confirmar_email(token: str, db: Session = Depends(get_db)):
     user = db.execute(text("SELECT id, confirm_expires FROM users WHERE confirm_token = :token"), {"token": token}).fetchone()
     if not user:
         return _pagina_confirmacao("Link invalido", "Este link de confirmacao ja foi usado ou nao existe.", sucesso=False)
@@ -225,7 +225,6 @@ async def confirmar_email(token: str, db: Session = Depends(get_db)):
 @router.post("/reenviar-confirmacao")
 @limiter.limit("3/minute")
 async def reenviar_confirmacao(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
-    from services.email_service import enviar_email_confirmacao
     user = db.execute(text("SELECT id, nome, email_confirmado FROM users WHERE email = :email"), {"email": data.email}).fetchone()
     if not user:
         raise HTTPException(status_code=404, detail="Email nao encontrado")
@@ -271,7 +270,7 @@ async def esqueci_senha(request: Request, data: EsqueciSenhaRequest, db: Session
 
 @router.post("/resetar-senha")
 @limiter.limit("5/minute")
-async def resetar_senha(request: Request, data: ResetarSenhaRequest, db: Session = Depends(get_db)):
+def resetar_senha(request: Request, data: ResetarSenhaRequest, db: Session = Depends(get_db)):
     user = db.execute(text(
         "SELECT id, reset_expires FROM users WHERE reset_token = :token"
     ), {"token": data.token}).fetchone()
@@ -295,7 +294,7 @@ async def resetar_senha(request: Request, data: ResetarSenhaRequest, db: Session
     return {"status": "ok", "mensagem": "Senha alterada com sucesso! Faca login com a nova senha."}
 
 @router.get("/me")
-async def get_me(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+def get_me(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError:
@@ -311,13 +310,13 @@ async def get_me(credentials: HTTPAuthorizationCredentials = Depends(security), 
     return {"email": row[1], "user_id": row[0]}
 
 @router.get("/2fa/status")
-async def twofa_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def twofa_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     row = db.execute(text("SELECT totp_enabled FROM users WHERE id=:id"), {"id": usuario["id"]}).fetchone()
     enabled = bool(row[0]) if row else False
     return {"enabled": enabled, "configured": enabled}
 
 @router.post("/2fa/disable")
-async def twofa_disable(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def twofa_disable(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     db.execute(text("UPDATE users SET totp_enabled=false, totp_secret=NULL WHERE id=:id"), {"id": usuario["id"]})
     db.commit()
     return {"status": "ok", "mensagem": "2FA desativado"}

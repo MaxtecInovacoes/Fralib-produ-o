@@ -11,7 +11,6 @@ Uso:
 
     state.lead_obj = safe_qualificar(lead_raw, lead_dict, log_fn=_log)
 """
-from __future__ import annotations
 
 from typing import Any, Optional
 

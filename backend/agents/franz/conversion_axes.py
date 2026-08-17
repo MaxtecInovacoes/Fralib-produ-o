@@ -4,7 +4,6 @@ Cada eixo tem: label PT, prompt baked-in, peso (0.02–0.08).
 Agrupados em 6 categorias: Foundational, Communication, Psychology, Process, Intelligence, Execution.
 """
 
-from __future__ import annotations
 
 __all__ = [
     "_CONVERSION_AXES",

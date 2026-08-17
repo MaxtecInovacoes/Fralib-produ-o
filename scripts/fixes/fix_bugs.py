@@ -1,4 +1,3 @@
-import re
 
 # Fix 1: Remove 'criado_em != """' from pipeline_endpoints.py
 with open('/opt/fralib/backend/endpoints/pipeline_endpoints.py', 'r') as f:

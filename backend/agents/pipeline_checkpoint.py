@@ -75,7 +75,6 @@ def _backup_to_db(pipeline_id: str, checkpoint: dict):
 def _load_from_db(pipeline_id: str) -> dict:
     """Carrega checkpoint do Postgres (fallback quando disco não tem)."""
     try:
-        import psycopg2
 
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
@@ -197,7 +196,6 @@ def limpar_checkpoint(pipeline_id: str):
         print(f"[Checkpoint] 🗑️ Removido disco: {path}")
     # Limpar do Postgres também
     try:
-        import psycopg2
 
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
@@ -229,7 +227,6 @@ def limpar_checkpoints_expirados(max_age_hours: int = 24):
         print(f"[Checkpoint] Reaper disco erro: {e}")
     # Limpar DB também
     try:
-        import psycopg2
 
         conn = psycopg2.connect(_DB_URL)
         with conn.cursor() as cur:
@@ -262,7 +259,7 @@ def gerar_pipeline_id(
     cidade: str = "",
     lead_id: str = "",
 ) -> str:
-    """
+    F"""
     Gera ID unico para o pipeline baseado no lead, escopado ao user_id.
     Multi-tenant: prefixo 'u{user_id}-' garante que dois usuarios distintos
     nunca compartilhem o mesmo pipeline_id (e portanto nem o mesmo checkpoint).

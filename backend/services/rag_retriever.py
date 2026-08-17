@@ -14,7 +14,6 @@ Uso:
     results = search(engine, tenant_id=1, query="Builder timeout", top_k=5)
 """
 
-from __future__ import annotations
 
 import json
 import logging

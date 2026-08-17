@@ -1,6 +1,5 @@
 """Compatibility helpers for the canonical visual archetype engine."""
 
-from __future__ import annotations
 
 try:
     from core.archetypes import select_archetype

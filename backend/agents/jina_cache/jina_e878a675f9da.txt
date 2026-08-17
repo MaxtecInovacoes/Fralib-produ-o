@@ -1,0 +1,22 @@
+INTELIGENCIA DE MERCADO - NICHO: ACADEMIA | CIDADE: QUATRO BARRAS
+
+## 1. CONCORRENTES PRINCIPAIS
+## 2. PALAVRAS-CHAVE
+## 3. VOLUME E TENDENCIA
+## 4. COPY E CONVERSAO
+## 5. DESIGN E VIBE VISUAL
+
+**Referencia 1 (http://academia-x.com):**
+<html>Conteudo</html>
+
+**Referencia 2 (http://academia-y.com):**
+<html>Conteudo</html>
+
+**Referencia 3 (http://academia-z.com):**
+<html>Conteudo</html>
+
+
+=== DADOS ESTRUTURADOS PARA SEO ===
+FAQ_QUESTIONS: ["Q1", "Q2"]
+SEO_KEYWORDS: ["k1", "k2"]
+VALUE_PROPS: ["v1"]

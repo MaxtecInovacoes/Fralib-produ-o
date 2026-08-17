@@ -15,7 +15,6 @@ Usage:
     # result["structured_data_types"] → list of schema types injected
 """
 
-from __future__ import annotations
 
 import json
 import re

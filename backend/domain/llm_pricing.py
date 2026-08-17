@@ -3,7 +3,6 @@ LLM Pricing — Estimativa de custo por modelo.
 Fonte: preços públicos Anthropic + OpenAI, em USD por 1M tokens.
 """
 
-from typing import Optional
 
 # (input_usd_per_1M, output_usd_per_1M)
 _MODEL_PRICING: dict[str, tuple[float, float]] = {

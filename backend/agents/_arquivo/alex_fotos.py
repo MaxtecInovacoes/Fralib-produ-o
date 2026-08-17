@@ -31,7 +31,6 @@ def upscale_foto(foto_url: str) -> str:
 
 def redimensionar_foto(foto_url: str, max_width: int) -> str:
     """Redimensiona foto mantendo aspect ratio"""
-    from alex_logo import limpar_url_google
     try:
         foto_url = limpar_url_google(foto_url)
         response = requests.get(foto_url, timeout=10)
@@ -53,7 +52,6 @@ def redimensionar_foto(foto_url: str, max_width: int) -> str:
 
 def converter_para_webp(imagem_path: str, qualidade: int = 85, assets_dir: str = "", filename: str = "") -> str:
     """Converte imagem para WebP"""
-    from alex_logo import limpar_url_google
     try:
         if imagem_path.startswith("http"):
             imagem_path = limpar_url_google(imagem_path)
@@ -85,7 +83,6 @@ def converter_para_webp(imagem_path: str, qualidade: int = 85, assets_dir: str =
 
 def gerar_thumbnail(imagem_path: str, width: int = 400, assets_dir: str = "", filename: str = "") -> str:
     """Gera thumbnail da imagem"""
-    from alex_logo import limpar_url_google
     try:
         if imagem_path.startswith("http"):
             imagem_path = limpar_url_google(imagem_path)
@@ -121,7 +118,6 @@ def gerar_thumbnail(imagem_path: str, width: int = 400, assets_dir: str = "", fi
 
 def processar_fotos(fotos: List[str], assets_dir: str = "/tmp") -> Dict:
     """Processa fotos: upscale, WebP, thumbnails"""
-    from alex_logo import limpar_url_google
     fotos_webp = []
     qualidade = {"baixa": [], "media": [], "alta": []}
     total_upscaled = 0

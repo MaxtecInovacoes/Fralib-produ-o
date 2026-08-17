@@ -14,11 +14,9 @@ Como ativa:
   - Importado pelo hermes (heartbeat a cada 5min)
   - Ou executado direto: python -m backend.services.key_healthcheck
 """
-from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
 
 import requests
 
@@ -146,8 +144,6 @@ def auto_reprocess_recent_auth_failures() -> int:
     Retorna numero de jobs reenfileirados.
     """
     try:
-        from backend.core.database import engine
-        from sqlalchemy import text
 
         with engine.begin() as conn:
             # Marca pipeline_failures com auth_error como reprocessaveis

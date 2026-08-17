@@ -41,4 +41,9 @@ def test_worker_infers_segment_and_city_from_name_and_address():
 
     assert worker._infer_segment_from_name("Elite Performance Academia") == "academia"
     assert worker._infer_segment_from_name("PhD Sports Gym") == "academia"
-    assert worker._infer_city_from_address("Rua das Acácias, 420 — Sala 3, Jardim Botânico, Curitiba — PR") == "Curitiba"
+    assert (
+        worker._infer_city_from_address(
+            "Rua das Acácias, 420 — Sala 3, Jardim Botânico, Curitiba — PR"
+        )
+        == "Curitiba"
+    )

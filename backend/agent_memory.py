@@ -12,7 +12,6 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 _MEMORY_BASE = Path(os.environ.get("FRALIB_BASE_DIR", str(Path(__file__).resolve().parent))) / "memory"
 MEMORY_DIR = _MEMORY_BASE

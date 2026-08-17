@@ -4,7 +4,6 @@ Keeps lead-specific execution IDs and segment inference deterministic so cached
 artifacts do not bleed between similar searches in the same city.
 """
 
-from __future__ import annotations
 
 import re
 import unicodedata

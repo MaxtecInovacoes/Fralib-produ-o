@@ -1,6 +1,5 @@
 import httpx
 import os
-from typing import Optional
 from dotenv import load_dotenv
 
 # Garantir que .env está carregado independente de quem importa

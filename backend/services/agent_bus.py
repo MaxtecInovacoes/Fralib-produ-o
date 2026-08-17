@@ -13,9 +13,7 @@ Outros agentes assinam eventos relevantes:
 
 Implementacao: in-memory pub/sub. Em prod, troca por Redis pub/sub.
 """
-from __future__ import annotations
 
-import json
 import logging
 import threading
 from collections import defaultdict, deque

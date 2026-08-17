@@ -10,7 +10,6 @@ Cada nicho tem:
 
 Inspirado em: Awwwards, SiteInspire, godly.website
 """
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal

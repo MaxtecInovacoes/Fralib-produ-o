@@ -1,6 +1,5 @@
 """Read-only Hermes watchdog snapshots and guarded incident logging."""
 
-from __future__ import annotations
 
 import json
 import os
@@ -48,7 +47,6 @@ def _detect_runtime() -> str:
     import shutil
     if shutil.which("systemctl"):
         try:
-            import subprocess
             r = subprocess.run(
                 ["systemctl", "list-unit-files", "fralib-*.service", "--no-legend"],
                 capture_output=True, text=True, timeout=5

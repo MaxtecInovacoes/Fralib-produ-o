@@ -1,6 +1,5 @@
 """Lead Provider: Hunter (Google Maps scraping search)."""
 
-from __future__ import annotations
 
 import json
 import uuid
@@ -231,7 +230,6 @@ class HunterProvider:
 
     @staticmethod
     def _slug(value: str) -> str:
-        import re
         import unicodedata
 
         norm = (

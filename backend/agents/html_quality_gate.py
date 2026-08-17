@@ -10,7 +10,6 @@ delegated to dedicated modules:
 - html_content_validator: Text content, emojis, emails, fake data
 """
 
-from __future__ import annotations
 
 import dataclasses
 import datetime

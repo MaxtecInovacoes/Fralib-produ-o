@@ -460,7 +460,6 @@ def call_llm_stream(
 
     # Log usage
     try:
-        from llm_direct import _registrar_uso_completo
         _registrar_uso_completo(
             model_id,
             usage.get("input_tokens", 0),
@@ -541,7 +540,6 @@ def call_llm_cached(
     # Log usage
     usage = response.usage
     try:
-        from llm_direct import _registrar_uso_completo
         _registrar_uso_completo(
             model_id,
             usage.input_tokens,

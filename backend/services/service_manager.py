@@ -16,11 +16,8 @@ Uso:
     for svc in list_services():
         print(svc.name, svc.status, svc.runtime)
 """
-from __future__ import annotations
 
 import json
-import os
-import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field

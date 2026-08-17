@@ -4,9 +4,7 @@ Quando o lead chega no stage 'won' ou pede explicitamente fechamento humano,
 o sistema cria uma entrada nesta fila. O closer recebe contexto completo e
 assume a conversa via WhatsApp.
 """
-from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import text
@@ -109,7 +107,6 @@ def list_pending(
     limit: int = 50,
 ) -> list[dict[str, Any]]:
     """Lista leads pendentes na fila do closer (status='pending')."""
-    import json
     with engine.connect() as conn:
         rows = conn.execute(
             text("""

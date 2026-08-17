@@ -31,7 +31,6 @@ Rotas:
 NOTA: Os endpoints de admin veem TODOS os tenants por design (superadmin precisa
 de visibilidade global). Se multi-tenant admin for necessario, adicionar filtro.
 """
-from __future__ import annotations
 
 import os
 import subprocess
@@ -47,7 +46,7 @@ from backend.agents.manager.agent import PipelineState, run_pipeline
 router = APIRouter(prefix="/api/admin/pipeline", tags=["admin-pipeline-control"])
 
 
-def require_admin(usuario: dict) -> None:
+def _require_admin(usuario: dict) -> None:
     """Verifica que o requester e admin/superadmin."""
     role = (usuario or {}).get("role", "")
     if role not in ("admin", "superadmin"):
@@ -56,7 +55,7 @@ def require_admin(usuario: dict) -> None:
 
 
 @router.get("/status")
-async def api_pipeline_status(
+def api_pipeline_status(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -65,7 +64,7 @@ async def api_pipeline_status(
     Retorna worker (uptime/poll), jobs (por status/tipo), spans (running/24h),
     travados (>1h), fila por tenant.
     """
-    require_admin(usuario)
+    _require_admin(usuario)
 
     # Jobs por status e tipo
     jobs_rows = db.execute(
@@ -294,12 +293,12 @@ async def api_pipeline_status(
 
 
 @router.get("/health")
-async def api_pipeline_health(
+def api_pipeline_health(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Health check booleano rapido."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     worker_alive = _is_worker_alive(db)
     stuck_count = db.execute(
@@ -335,13 +334,13 @@ class KillStuckBody(BaseModel):
 
 
 @router.post("/kill-stuck")
-async def api_kill_stuck(
+def api_kill_stuck(
     body: KillStuckBody,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Mata spans 'running' mais antigos que N minutos."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     if body.dry_run:
         count = db.execute(
@@ -386,12 +385,12 @@ async def api_kill_stuck(
 
 
 @router.post("/reap")
-async def api_pipeline_reap(
+def api_pipeline_reap(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Executa reap completo (jobs travados + spans stale + exhausted)."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     # Import local para evitar import circular
     from backend.core import job_queue
@@ -435,13 +434,13 @@ class ResumePipelineBody(BaseModel):
 
 
 @router.post("/clear-queue")
-async def api_clear_queue(
+def api_clear_queue(
     body: ClearQueueBody,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Cancela jobs 'pending' (opcionalmente filtrados por tenant/tipo)."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     where = ["status = 'pending'"]
     params: dict[str, Any] = {}
@@ -486,11 +485,11 @@ async def api_clear_queue(
 
 
 @router.post("/worker/restart")
-async def api_worker_restart(
+def api_worker_restart(
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Reinicia o servico systemd do worker (acao destrutiva)."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     try:
         result = subprocess.run(
@@ -511,13 +510,13 @@ async def api_worker_restart(
         raise HTTPException(status_code=500, detail=f"Falha: {e}")
 
 @router.post("/restart-api")
-async def api_restart_api(
+def api_restart_api(
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Reinicia o servico systemd fralib-api (porta 8001).
     Usado apos deploy para recarregar codigo atualizado.
     """
-    require_admin(usuario)
+    _require_admin(usuario)
 
     try:
         result = subprocess.run(
@@ -538,15 +537,14 @@ async def api_restart_api(
         raise HTTPException(status_code=500, detail=f"Falha: {e}")
 
 @router.post("/start")
-async def api_start_pipeline(
+def api_start_pipeline(
     body: StartPipelineBody,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Inicia pipeline manualmente via admin, rodando em background para não bloquear a HTTP response."""
-    require_admin(usuario)
-    from backend.agents.manager.agent import PipelineState, run_pipeline
+    _require_admin(usuario)
 
     # Usar lead_id do body diretamente — nao do lead_data
     lead_id = body.lead_id or body.lead_data.get("id", "") or "unknown"
@@ -561,7 +559,7 @@ async def api_start_pipeline(
         paused_by=None,
     )
 
-    background_tasks.add_task(run_pipeline_background, state)
+    background_tasks.add_task(_run_pipeline_background, state)
 
     return {
         "ok": True,
@@ -573,7 +571,7 @@ async def api_start_pipeline(
     }
 
 
-def run_pipeline_background(state: PipelineState) -> None:
+def _run_pipeline_background(state: PipelineState) -> None:
     """Wrapper para executar pipeline em background task (fora do contexto HTTP)."""
     try:
         run_pipeline(state)
@@ -585,13 +583,13 @@ def run_pipeline_background(state: PipelineState) -> None:
         )
 
 @router.post("/pause")
-async def api_pause_pipeline(
+def api_pause_pipeline(
     body: PausePipelineBody,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Pausa pipeline manualmente via admin."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     # Busca pipeline ativa mais recente por tenant_id (job queue não suporta pausar por run_id específico)
     active = db.execute(
@@ -624,13 +622,13 @@ async def api_pause_pipeline(
         "paused_at": _now_iso(),
     }
 @router.post("/resume")
-async def api_resume_pipeline(
+def api_resume_pipeline(
     body: ResumePipelineBody,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Retoma pipeline pausada via admin."""
-    require_admin(usuario)
+    _require_admin(usuario)
 
     # Remove estado pausado automaticamente com base no status mais recente
     updated = db.execute(

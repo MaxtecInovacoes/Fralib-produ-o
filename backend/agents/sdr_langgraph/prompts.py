@@ -4,7 +4,6 @@ Operational instructions stay in English for consistency and easier tuning.
 Customer-facing replies must always be written in Brazilian Portuguese.
 """
 
-from __future__ import annotations
 
 
 OUTPUT_LANGUAGE_RULE = """

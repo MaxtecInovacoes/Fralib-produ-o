@@ -21,7 +21,6 @@ def step_design_director(state: PipelineState) -> PipelineState:
 
     try:
         from backend.agents.design_director import gerar_direcao_criativa
-        from backend.agents.handoff_types import CreativeDirectionContract
 
         raw = gerar_direcao_criativa(
             nicho=state.segmento,

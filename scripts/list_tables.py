@@ -1,7 +1,5 @@
 from backend.core.database import SessionLocal
 from sqlalchemy import text
-import json
-import sys
 
 db = SessionLocal()
 try:

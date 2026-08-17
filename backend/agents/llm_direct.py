@@ -20,7 +20,6 @@ Lógica extraída para:
 @architecture Orquestrador (coordena módulos de LLM)
 """
 
-from __future__ import annotations
 
 import json
 import re as _re

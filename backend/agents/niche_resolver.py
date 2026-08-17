@@ -1,6 +1,5 @@
 """Deterministic niche and audience resolver for Builder prompts."""
 
-from __future__ import annotations
 
 import re
 import unicodedata

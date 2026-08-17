@@ -1,6 +1,5 @@
 """Vite/React file extraction and normalization utilities."""
 
-from __future__ import annotations
 
 import json
 import re

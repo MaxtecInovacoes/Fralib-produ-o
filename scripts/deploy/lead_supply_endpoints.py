@@ -9,7 +9,6 @@ Endpoints expostos:
   POST   /api/lead-supply/production/tick
   POST   /api/lead-supply/retry-all
 """
-from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -292,7 +291,6 @@ async def refill_supply(
     uid = _tenant_id(usuario)
 
     try:
-        from backend.services.lead_supply_inventory import enqueue_hunter
         job_id = enqueue_hunter(db, uid, delay_seconds=5, force=True)
         return {"ok": True, "job_id": str(job_id) if job_id else None}
     except Exception as e:
@@ -368,7 +366,6 @@ async def retry_all(
 
     if reprocessed > 0:
         try:
-            from backend.services.lead_supply_inventory import enqueue_hunter
             enqueue_hunter(db, uid, delay_seconds=5, force=False)
         except Exception:
             pass

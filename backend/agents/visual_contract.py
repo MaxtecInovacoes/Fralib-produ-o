@@ -1,6 +1,5 @@
 """Visual contract generated before renderer execution."""
 
-from __future__ import annotations
 
 from typing import Any
 

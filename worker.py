@@ -8,7 +8,6 @@ import logging
 import os
 import re
 import signal
-import sys
 import time
 
 from backend.core.database import inicializar_database
@@ -349,7 +348,6 @@ def _run_pipeline_job(db, job) -> bool:
         )
         # Persiste erro estruturado no banco para dashboard/queries
         try:
-            import traceback as tb_mod
             from backend.services.lead_supply_engine import log_pipeline_error
             err_step = final.error_step or final.current_state
             err_type = final.error.split(":")[0] if final.error and ": " in final.error else "PipelineError"
@@ -415,8 +413,6 @@ def _run_pipeline_job(db, job) -> bool:
 
 def _run_supply_job(db, job) -> bool:
     """lead_production_tick / lead_supply_caio / lead_supply_hunter."""
-    from backend.core import job_queue
-    from backend.services import lead_supply_engine
 
     tipo = job["tipo"]
     payload = job["payload"] or {}
@@ -443,7 +439,6 @@ def _run_supply_job(db, job) -> bool:
 def run_one() -> bool:
     """Processa 1 job. Retorna True se processou, False se fila vazia."""
     try:
-        from backend.core import job_queue
         from backend.core.database import SessionLocal
         from backend.core.job_queue import generate_worker_id
 

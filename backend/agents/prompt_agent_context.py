@@ -1,6 +1,5 @@
 """Prompt Agent context builders: business, qualification, research, SEO, content, media, design, publication."""
 
-from __future__ import annotations
 
 import json
 from typing import Any
@@ -360,7 +359,6 @@ def _section_sequence_for_niche(segment: str, archetype: str, *, has_services: b
 
 def _visual_direction_contract(context: dict[str, Any]) -> dict[str, Any]:
     """Create the concrete art-direction contract the Builder must compose from."""
-    from backend.agents.prompt_agent_helpers import _as_list
 
     business = context.get("business") or {}
     media = context.get("media") or {}
@@ -450,7 +448,6 @@ def _visual_direction_contract(context: dict[str, Any]) -> dict[str, Any]:
 def _visual_section_order(
     build_plan: dict[str, Any], *, has_address: bool
 ) -> list[dict[str, str]]:
-    from backend.agents.prompt_agent_helpers import _as_list
 
     raw = (
         (build_plan.get("information_architecture") or {}).get("section_order")

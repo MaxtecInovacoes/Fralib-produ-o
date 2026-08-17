@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Patch worker.py: add fallback lead_data when lead not found in DB."""
-import re
 
 with open("/opt/fralib/worker.py") as f:
     s = f.read()

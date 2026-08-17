@@ -1,4 +1,3 @@
-import re
 
 with open('/opt/fralib/backend/endpoints/provider_alerts_endpoints.py', 'r') as f:
     content = f.read()

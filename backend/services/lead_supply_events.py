@@ -1,6 +1,5 @@
 """Lead supply events module - event logging utilities."""
 
-from __future__ import annotations
 
 import json
 from typing import Any

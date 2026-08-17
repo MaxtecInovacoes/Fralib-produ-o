@@ -4,8 +4,6 @@ Revision ID: baseline_real_prod
 Revises: b278e17c0c0c
 Create Date: 2026-05-13
 """
-from alembic import op  # noqa: F401
-import sqlalchemy as sa  # noqa: F401
 
 
 revision = 'baseline_real_prod'

@@ -1,6 +1,5 @@
 """Lead supply filters module - normalization and deduplication utilities."""
 
-from __future__ import annotations
 
 import re
 from typing import Any

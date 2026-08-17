@@ -4,7 +4,6 @@ Each pipeline step can write the payload it received/produced here without
 affecting the production deploy path.
 """
 
-from __future__ import annotations
 
 import json
 import os

@@ -1,7 +1,6 @@
 """Validador Final — revisa HTML antes do deploy: consistência, SEO,
 acessibilidade, aderência ao PRD. Saída JSON."""
 
-import os
 from backend.agents.handoff_types import ValidacaoResultado
 from backend.agents.llm_direct import call_claude
 

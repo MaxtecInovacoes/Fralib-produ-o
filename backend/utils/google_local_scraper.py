@@ -13,8 +13,6 @@ Módulos:
   - google_scraper_core: classe GoogleLocalScraper com toda a lógica
   - google_scraper_helpers: utilitários (_env_int, _close_quietly, _playwright_launch_args)
 """
-from backend.utils.google_scraper_core import GoogleLocalScraper
-from backend.utils.google_scraper_helpers import _env_int, _close_quietly, _playwright_launch_args
 
 __all__ = [
     "GoogleLocalScraper",

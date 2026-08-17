@@ -18,7 +18,6 @@ Lógica extraída para:
 @architecture Orquestrador (define grafo, coordena nodes)
 """
 
-from __future__ import annotations
 import os
 import sys
 import json
@@ -466,7 +465,6 @@ def node_hook(state: SDRState) -> dict:
         )
 
         # Parse JSON
-        import re
         json_match = re.search(r'\{[\s\S]*\}', response_text)
         if json_match:
             data = json.loads(json_match.group())
@@ -521,7 +519,6 @@ def make_stage_node(stage_name: str):
 
         # Tentar LLM
         try:
-            from agents.llm_direct import call_claude
 
             # Persona texto
             persona_text = get_persona_text(persona)
@@ -577,7 +574,6 @@ def make_stage_node(stage_name: str):
                 enable_context=False,
             )
 
-            import re
             json_match = re.search(r'\{[\s\S]*\}', response_text)
             if json_match:
                 data = json.loads(json_match.group())
@@ -723,7 +719,6 @@ def node_schedule(state: SDRState) -> dict:
     target_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
     # Tentar extrair dia/hora
-    import re
     time_match = re.search(r"\b(\d{1,2})\s*[h:](\d{0,2})", incoming)
     time_label = ""
     if time_match:
@@ -827,7 +822,6 @@ def node_save_and_send(state: SDRState) -> dict:
                 msg_hash,
                 pick_wall_street_close,
             )
-            from agents.sdr_langgraph.state import LeadMemory as _LM
 
             # 1. Detecta msg parece-robo
             if is_robot_like(reply):

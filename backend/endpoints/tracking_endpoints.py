@@ -8,7 +8,6 @@ Deduplicacao: mesma combinacao (lead_id, ip_hash, ua_hash) em <30min = 1 view.
 """
 import hashlib
 import os
-import sys
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session

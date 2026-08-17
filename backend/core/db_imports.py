@@ -7,7 +7,6 @@ Elimina a duplicação de:
     from sqlalchemy import text
 em 50+ arquivos (endpoints, services, lead_supply_providers).
 """
-from __future__ import annotations
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session

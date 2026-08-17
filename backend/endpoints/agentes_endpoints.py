@@ -14,11 +14,9 @@ Rotas:
   DELETE /api/agentes/training/{id} — desativa regra
 """
 
-from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -139,7 +137,6 @@ async def train_agent(
             raise HTTPException(status_code=500, detail="Falha ao gravar regra")
     elif payload.get("sales_axis"):
         # Ângulo de venda: ativa o eixo em vez de gravar regra textual
-        from backend.agents.franz.conversion_axes import normalize_conversion_axis
         sales_axis = normalize_conversion_axis(payload.get("sales_axis"))
         reply = payload.get("reply") or f"Diretriz de {sales_axis} ativada."
         try:

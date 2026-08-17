@@ -1,6 +1,5 @@
 """Vite/React configuration constants and environment helpers."""
 
-from __future__ import annotations
 
 import os
 

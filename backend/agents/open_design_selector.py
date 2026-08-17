@@ -6,7 +6,6 @@ import os
 import re
 import hashlib
 import json
-from typing import Optional
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DS_DIR = os.environ.get("OPEN_DESIGN_DS_DIR", os.path.join(_SCRIPT_DIR, "..", "open-design", "design-systems"))

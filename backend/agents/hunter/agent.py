@@ -1,5 +1,4 @@
 """Hunter agent — delegates to lead_supply_providers.hunter.run_hunter_job."""
-from __future__ import annotations
 
 from typing import Any, Dict, Optional
 

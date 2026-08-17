@@ -3,6 +3,7 @@ import os, json, re, time, hashlib
 import requests
 from urllib.parse import quote
 
+
 def clean_json_response(text: str) -> str:
     import re as _rcj
 
@@ -43,12 +44,101 @@ def clean_json_response(text: str) -> str:
         i = j + 1
     return max(candidates, key=len) if candidates else text
 
+
+QUERIES_DESIGN_NICHO = {
+    "academia": "academia independente site design premium UI UX moderno brasil",
+    "crossfit": "crossfit box site design premium dark energetico UI UX",
+    "gym": "gym fitness studio site design premium moderno UI UX brasil",
+    "fitness": "personal trainer studio fitness site design premium UI UX",
+    "musculacao": "musculacao studio site design premium dark energetico UI UX",
+    "barbearia": "barbearia premium site design moderno masculino UI UX brasil",
+    "salao": "salao de beleza premium site design elegante UI UX brasil",
+    "clinica": "clinica medica site design premium clean profissional UI UX",
+    "odontologica": "clinica odontologica site design premium clean UI UX brasil",
+    "dentista": "dentista consultorio site design premium moderno UI UX",
+    "estetica": "clinica estetica site design premium luxuoso UI UX brasil",
+    "restaurante": "restaurante local site design premium gastronomia UI UX brasil",
+    "lanchonete": "lanchonete artesanal site design premium moderno UI UX",
+    "pizzaria": "pizzaria artesanal site design premium gastronomia UI UX",
+    "padaria": "padaria artesanal site design premium aconchegante UI UX",
+    "confeitaria": "confeitaria artesanal site design premium elegante UI UX",
+    "cafe": "cafeteria independente site design premium aconchegante UI UX",
+    "advocacia": "escritorio advocacia site design premium sober UI UX brasil",
+    "imobiliaria": "imobiliaria boutique site design premium moderno UI UX",
+    "escola": "escola curso site design premium moderno educacao UI UX",
+    "farmacia": "farmacia manipulacao site design premium clean UI UX brasil",
+    "pet": "petshop veterinaria site design premium moderno UI UX brasil",
+    "auto": "oficina mecanica site design premium moderno UI UX brasil",
+    "nutricionista": "nutricionista site design premium clean saude UI UX brasil",
+    "psicologia": "psicologo clinica site design premium acolhedor UI UX brasil",
+    "arquitetura": "escritorio arquitetura site design premium portfolio UI UX",
+    "fotografia": "fotografo site design premium portfolio visual UI UX brasil",
+}
+
+GEO_FALLBACK_MAP = {
+    "quatro barras": "curitiba",
+    "colombo": "curitiba",
+    "pinhais": "curitiba",
+    "sao jose dos pinhais": "curitiba",
+    "contagem": "belo horizonte",
+    "uberlandia": "belo horizonte",
+    "campinas": "sao paulo",
+    "sao bernardo do campo": "sao paulo",
+    "santo andre": "sao paulo",
+    "guarulhos": "sao paulo",
+    "osasco": "sao paulo",
+    "barueri": "sao paulo",
+    "niteroi": "rio de janeiro",
+    "nova iguacu": "rio de janeiro",
+    "duque de caxias": "rio de janeiro",
+    "sao goncalo": "rio de janeiro",
+}
+
+INTENT_QUERIES = {
+    "academia": "melhores precos plano academia musculacao personal trainer",
+    "crossfit": "preco plano crossfit box musculacao funcional",
+    "gym": "academia gym preco plano musculacao personal",
+    "fitness": "academia fitness preco plano personal trainer",
+    "musculacao": "academia musculacao preco plano mensalidade",
+    "barbearia": "barbearia preco corte masculino agendamento",
+    "salao": "salao beleza preco servicos agendamento",
+    "clinica": "clinica medica preco consulta agendamento",
+    "odontologica": "dentista preco consulta implante ortodontia",
+    "dentista": "dentista preco consulta implante limpeza",
+    "estetica": "estetica preco tratamento corpo rosto",
+    "restaurante": "restaurante preco menu reserva delivery",
+    "lanchonete": "lanchonete preco cardapio delivery",
+    "pizzaria": "pizzaria preco cardapio delivery rodizio",
+    "padaria": "padaria preco pao cafe manha",
+    "confeitaria": "confeitaria preco bolo festa encomenda",
+    "cafe": "cafeteria preco cafe lanche ambiente",
+    "advocacia": "advogado preco consulta area direito",
+    "imobiliaria": "imovel preco aluguel compra imobiliaria",
+    "escola": "curso preco matricula escola idioma",
+    "farmacia": "farmacia preco medicamento manipulacao delivery",
+    "pet": "petshop preco banho tosa veterinario pet shop",
+    "auto": "oficina mecanica preco revisao troca oleo",
+    "nutricionista": "nutricionista preco consulta plano alimentar",
+    "psicologia": "psicologo preco consulta terapia online",
+    "arquitetura": "arquiteto preco projeto reforma decoracao",
+    "fotografia": "fotografo preco ensaio casamento evento",
+}
+
+_EXCLUDE = [
+    "google", "facebook", "instagram", "youtube", "linkedin", "twitter",
+    "smartfit", "bodytech", "bluefit", "mcdonalds", "starbucks", "outback",
+    "giraffas", "subway", "burger", "sorridents", "odontoprev", "drogasil",
+    "drogaraia", "cobasi", "petz", "petlove", "kumon", "wizard", "ccaa",
+    "quintoandar", "vivareal", "zapimoveis", "localiza", "movida", "unidas",
+    "wix.com", "wordpress.com", "blogspot", "squarespace", "webflow.io",
+    "maps", "wikipedia", "amazon", "mercadolivre", "ifood",
+]
+
+
 def pesquisar_referencias_jina(segmento: str, cidade: str = "") -> str:
     _cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "jina_cache")
     os.makedirs(_cache_dir, exist_ok=True)
-    _cache_key = hashlib.md5((segmento.lower() + cidade.lower()).encode()).hexdigest()[
-        :12
-    ]
+    _cache_key = hashlib.md5((segmento.lower() + cidade.lower()).encode()).hexdigest()[:12]
     _cache_file = os.path.join(_cache_dir, f"jina_{_cache_key}.txt")
     _TTL = 48 * 3600
     if (
@@ -59,35 +149,6 @@ def pesquisar_referencias_jina(segmento: str, cidade: str = "") -> str:
         with open(_cache_file, "r", encoding="utf-8") as _f:
             return _f.read()
 
-    QUERIES_DESIGN_NICHO = {
-        "academia": "academia independente site design premium UI UX moderno brasil",
-        "crossfit": "crossfit box site design premium dark energetico UI UX",
-        "gym": "gym fitness studio site design premium moderno UI UX brasil",
-        "fitness": "personal trainer studio fitness site design premium UI UX",
-        "musculacao": "musculacao studio site design premium dark energetico UI UX",
-        "barbearia": "barbearia premium site design moderno masculino UI UX brasil",
-        "salao": "salao de beleza premium site design elegante UI UX brasil",
-        "clinica": "clinica medica site design premium clean profissional UI UX",
-        "odontologica": "clinica odontologica site design premium clean UI UX brasil",
-        "dentista": "dentista consultorio site design premium moderno UI UX",
-        "estetica": "clinica estetica site design premium luxuoso UI UX brasil",
-        "restaurante": "restaurante local site design premium gastronomia UI UX brasil",
-        "lanchonete": "lanchonete artesanal site design premium moderno UI UX",
-        "pizzaria": "pizzaria artesanal site design premium gastronomia UI UX brasil",
-        "padaria": "padaria artesanal site design premium aconchegante UI UX",
-        "confeitaria": "confeitaria artesanal site design premium elegante UI UX",
-        "cafe": "cafeteria independente site design premium aconchegante UI UX",
-        "advocacia": "escritorio advocacia site design premium sober UI UX brasil",
-        "imobiliaria": "imobiliaria boutique site design premium moderno UI UX",
-        "escola": "escola curso site design premium moderno educacao UI UX",
-        "farmacia": "farmacia manipulacao site design premium clean UI UX brasil",
-        "pet": "petshop veterinaria site design premium moderno UI UX brasil",
-        "auto": "oficina mecanica site design premium moderno UI UX brasil",
-        "nutricionista": "nutricionista site design premium clean saude UI UX brasil",
-        "psicologia": "psicologo clinica site design premium acolhedor UI UX brasil",
-        "arquitetura": "escritorio arquitetura site design premium portfolio UI UX",
-        "fotografia": "fotografo site design premium portfolio visual UI UX brasil",
-    }
     seg_lower = segmento.lower()
     query = None
     for key, q in QUERIES_DESIGN_NICHO.items():
@@ -100,81 +161,79 @@ def pesquisar_referencias_jina(segmento: str, cidade: str = "") -> str:
         query = query + " " + cidade
     print("[Jina AI] Query de design: " + query)
 
-    sites_ref = []
-    EXCLUIR = [
-        "google",
-        "facebook",
-        "instagram",
-        "youtube",
-        "linkedin",
-        "twitter",
-        "smartfit",
-        "bodytech",
-        "bluefit",
-        "mcdonalds",
-        "starbucks",
-        "outback",
-        "giraffas",
-        "subway",
-        "burger",
-        "sorridents",
-        "odontoprev",
-        "drogasil",
-        "drogaraia",
-        "cobasi",
-        "petz",
-        "petlove",
-        "kumon",
-        "wizard",
-        "ccaa",
-        "quintoandar",
-        "vivareal",
-        "zapimoveis",
-        "localiza",
-        "movida",
-        "unidas",
-        "wix.com",
-        "wordpress.com",
-        "blogspot",
-        "squarespace",
-        "webflow.io",
-        "maps",
-        "wikipedia",
-        "amazon",
-        "mercadolivre",
-        "ifood",
-    ]
-    try:
-        search_url = "https://r.jina.ai/https://www.google.com/search?q=" + quote(query)
-        headers_search = {"X-Return-Format": "markdown", "X-Timeout": "15"}
-        if jina_key := os.getenv("JINA_API_KEY"):
-            headers_search["Authorization"] = f"Bearer {jina_key}"
-        response = requests.get(search_url, headers=headers_search, timeout=20)
-        if response.status_code == 200:
-            for line in response.text.split(chr(10)):
-                if "http" in line:
-                    url_match = re.search(r"https?://[^\s\)\"\x27]+", line)
-                    if url_match:
-                        url = url_match.group(0).rstrip(".,)")
-                        url_lower = url.lower()
-                        if not any(exc in url_lower for exc in EXCLUIR):
-                            if url not in sites_ref and len(url) > 15:
-                                sites_ref.append(url)
-                                if len(sites_ref) >= 3:
-                                    break
-    except Exception as e:
-        print("[Jina AI] Erro busca Google: " + str(e))
+    def _fetch_sites(query_local: str, timeout: int = 20) -> list:
+        out = []
+        try:
+            url = "https://r.jina.ai/https://www.google.com/search?q=" + quote(query_local)
+            hdrs = {"X-Return-Format": "markdown", "X-Timeout": "15"}
+            if jina_key := os.getenv("JINA_API_KEY"):
+                hdrs["Authorization"] = f"Bearer {jina_key}"
+            r = requests.get(url, headers=hdrs, timeout=timeout)
+            if r.status_code == 200:
+                for line in r.text.split(chr(10)):
+                    if "http" not in line:
+                        continue
+                    m = re.search(r"https?://[^\s\)\"\x27]+", line)
+                    if not m:
+                        continue
+                    u = m.group(0).rstrip(".,)")
+                    if u in out or len(u) <= 15:
+                        continue
+                    if any(exc in u.lower() for exc in _EXCLUDE):
+                        continue
+                    out.append(u)
+                    if len(out) >= 3:
+                        break
+        except Exception as exc:
+            print("[Jina AI] Erro busca Google: " + str(exc))
+        return out
+
+    sites_ref = _fetch_sites(query)
+    if not sites_ref and cidade:
+        geo_cap = GEO_FALLBACK_MAP.get(cidade.lower().strip())
+        if geo_cap:
+            query_fallback = query.replace(" " + cidade, " " + geo_cap)
+            print("[Jina AI] Geo-expansao: sem resultados para '" + cidade + "', tentando '" + geo_cap + "'")
+            sites_ref = _fetch_sites(query_fallback)
+    if not sites_ref:
+        intent_q = None
+        for key, q in INTENT_QUERIES.items():
+            if key in seg_lower:
+                intent_q = q
+                break
+        if intent_q:
+            intent_full = (intent_q + " " + cidade) if cidade else intent_q
+            print("[Jina AI] Query intent: " + intent_full)
+            sites_ref = _fetch_sites(intent_full)
 
     if not sites_ref:
-        return (
-            "Jina AI: Sem referencias. Usar padroes premium do segmento "
-            + segmento
-            + "."
+        seg_key = seg_lower if seg_lower in INTENT_QUERIES else "academia"
+        return json.dumps(
+            {
+                "intelgencia_de_mercado": {
+                    "nicho": segmento,
+                    "cidade": cidade or "brasil",
+                    "concorrentes_principais": [],
+                    "palavras_chave": INTENT_QUERIES.get(seg_key, segmento).split(" ")[:6],
+                    "volume_tendencia": "sem dados externos — usar benchmarks do segmento",
+                    "copy_conversao": ["lead com problema real", "solucao sob medida", "resultado comprovado"],
+                    "design_vibe_visual": "premium moderno, identidade forte, cores alinhadas ao segmento",
+                    "faq_questions": [
+                        "Quanto custa um plano?",
+                        "Qual a diferenca para a concorrencia?",
+                        "Tem avaliacao de clientes?",
+                        "Como funciona o atendimento?",
+                        "Quais formas de pagamento?",
+                        "Tem unidade proxima?",
+                    ],
+                    "seo_keywords": (INTENT_QUERIES.get(seg_key, segmento).split(" ")[:8]),
+                    "value_props": ["Resultado comprovado", "Atendimento personalizado", "Localizacao estrategica"],
+                }
+            },
+            ensure_ascii=False,
         )
 
-    print(
-        "[Jina AI] Analisando " + str(len(sites_ref)) + " referencias para " + segmento
-    )
+    print("[Jina AI] Analisando " + str(len(sites_ref)) + " referencias para " + segmento)
 
     insights = []
     headers_site = {"X-Return-Format": "markdown", "X-Timeout": "15"}

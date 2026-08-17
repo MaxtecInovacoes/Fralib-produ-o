@@ -6,7 +6,6 @@ pre-validated component with known spacing, contrast, motion hooks and mobile
 behavior.
 """
 
-from __future__ import annotations
 
 import hashlib
 import html

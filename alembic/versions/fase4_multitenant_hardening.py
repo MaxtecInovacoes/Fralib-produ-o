@@ -5,7 +5,6 @@ Revises: baseline_real_prod
 Create Date: 2026-05-13
 """
 from alembic import op
-import sqlalchemy as sa  # noqa: F401
 
 
 revision = 'fase4_multitenant_hardening'

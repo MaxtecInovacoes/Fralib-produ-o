@@ -17,7 +17,6 @@ from sqlalchemy import text
 
 from backend.core.database import engine as _engine
 from backend.domain.plans import PLAN_SPECS
-from backend.services.cakto_client import get_cakto_client
 
 logger = logging.getLogger(__name__)
 

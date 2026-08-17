@@ -3,7 +3,6 @@ Compat - Interface compatível com bryan.py
 Permite que o resto do sistema continue usando responder_lead(), iniciar_contato(), etc
 """
 
-from __future__ import annotations
 import os
 import sys
 from typing import Optional
@@ -340,7 +339,6 @@ def followup_automatico(
 
     # Forçar a stage na memória
     try:
-        from agents.memory import carregar_memoria, salvar_memoria
         session_id = f"franz_lead_{telefone}"
         memoria = carregar_memoria(session_id, user_id=user_id) or {}
         memoria["stage"] = followup_stage

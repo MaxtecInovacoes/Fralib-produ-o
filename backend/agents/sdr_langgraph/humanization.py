@@ -7,7 +7,6 @@ Implementa os principios do SDD_ATTENDANCE.md:
 - Personalização por perfil do lead
 - Wall Street close automático quando hesita
 """
-from __future__ import annotations
 
 import hashlib
 import random

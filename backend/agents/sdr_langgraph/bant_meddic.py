@@ -10,12 +10,10 @@ A deteccao e feita por:
 
 Resultado e salvo em LeadMemory (campos bant_*, meddic_*).
 """
-from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class BudgetLevel(str, Enum):

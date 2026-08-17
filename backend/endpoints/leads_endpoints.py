@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from typing import Optional
 from backend.core.database import get_db
 from backend.endpoints.auth_endpoints import get_current_user
 from backend.endpoints.sse_endpoints import adicionar_log
@@ -11,7 +10,7 @@ router = APIRouter(prefix='/api/leads', tags=['leads'])
 
 
 @router.get('/sites')
-async def get_sites(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_sites(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id_s = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text("""
@@ -47,7 +46,7 @@ async def get_sites(db: Session = Depends(get_db), usuario: dict = Depends(get_c
         return {"sites": [], "total": 0}
 
 @router.get('/{lead_id}/conversa')
-async def get_conversa(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_conversa(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text("""
@@ -62,7 +61,7 @@ async def get_conversa(lead_id: str, db: Session = Depends(get_db), usuario: dic
         return {"mensagens": []}
 
 @router.patch('/{lead_id}')
-async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         campos = {}
         campos_permitidos = ['whatsapp', 'telefone_whatsapp', 'telefone', 'nome', 'segmento', 'cidade', 'observacoes', 'valor_venda', 'status']
@@ -88,7 +87,7 @@ async def atualizar_lead(lead_id: str, request_data: dict, db: Session = Depends
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/{lead_id}/reprocessar')
-async def reprocessar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def reprocessar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
         lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
@@ -109,7 +108,7 @@ class EditarSiteRequest(BaseModel):
     prompt: str
 
 @router.post('/{lead_id}/editar-site')
-async def editar_site(lead_id: str, req: EditarSiteRequest, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def editar_site(lead_id: str, req: EditarSiteRequest, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     from sqlalchemy import text as _text
     plano = db.execute(_text('SELECT plano FROM users WHERE id=:id'), {'id': usuario['id']}).scalar()
     if plano not in ('pro', 'beta', 'admin'):
@@ -230,7 +229,6 @@ async def upload_foto(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
 ):
-    import os
     tenant_id = usuario.get("tenant_id", usuario["id"])
     lead = db.execute(text("SELECT * FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
     if not lead:
@@ -307,7 +305,7 @@ class LeadManualRequest(_BaseModel2):
     score: _Optional2[int] = 80
 
 @router.post('/manual')
-async def criar_lead_manual(req: LeadManualRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def criar_lead_manual(req: LeadManualRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     from datetime import datetime
     import uuid as _uuid
     lead_id = str(_uuid.uuid4())
@@ -329,8 +327,6 @@ async def criar_lead_manual(req: LeadManualRequest, background_tasks: Background
     return {"ok": True, "lead_id": lead_id, "mensagem": "Lead criado!" + (" Site sendo gerado..." if req.briefing else " Sem briefing — site não gerado.")}
 
 async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
-    from database import engine
-    from sqlalchemy import text as _text
     try:
         from agents.builder.agent import render_site
         from agents.arquiteto_mestre import gerar_arquiteto_mestre_prd
@@ -400,9 +396,6 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
     except Exception as e:
         print(f"[LeadManual] Erro ao gerar site: {e}")
         import traceback; traceback.print_exc()
-        from datetime import datetime as _dt
-        from sqlalchemy import create_engine as _ce
-        import os as _os2
         _eng = _ce(_os2.environ.get('DATABASE_URL', ''), pool_pre_ping=True)
         with _eng.connect() as conn:
             conn.execute(_text("UPDATE leads SET status='erro', atualizado_em=:ts WHERE id=:id AND user_id=:uid"),
@@ -410,7 +403,7 @@ async def _gerar_site_manual(lead_id: str, req: LeadManualRequest, user_id):
             conn.commit()
 
 @router.get('/mensagens-novas')
-async def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
         result = db.execute(text("""
@@ -428,7 +421,7 @@ async def get_mensagens_novas(db: Session = Depends(get_db), usuario: dict = Dep
 
 
 @router.get('/{lead_id}/chat')
-async def get_lead_chat(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_lead_chat(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Retorna histórico de conversas de um lead (para modal de chat no CRM)."""
     tenant_id = usuario.get("tenant_id", usuario["id"])
     # Verificar que lead pertence ao tenant
@@ -453,7 +446,7 @@ async def get_lead_chat(lead_id: str, db: Session = Depends(get_db), usuario: di
 
 
 @router.get('/capturados')
-async def get_leads_capturados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_leads_capturados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         cap_sql = "SELECT id, nome, cidade, segmento, rating, score, tier, status FROM leads WHERE user_id=:user_id AND status=:st ORDER BY criado_em DESC"
@@ -476,7 +469,7 @@ async def get_leads_capturados(db: Session = Depends(get_db), usuario: dict = De
 
 
 @router.delete('/fila')
-async def limpar_fila_capturados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def limpar_fila_capturados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         result = db.execute(text(del_sql), {'user_id': tenant_id, 'st': 'capturado'})
@@ -485,13 +478,11 @@ async def limpar_fila_capturados(db: Session = Depends(get_db), usuario: dict = 
         return {'ok': True, 'deletados': deletados, 'mensagem': str(deletados) + ' lead(s) removido(s) da fila'}
     except Exception as e:
         print(f'[Leads] Erro limpar fila: {e}')
-        import traceback; traceback.print_exc()
         raise
 
 
 @router.post('/processar-fila')
-async def processar_proximo_fila(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
-    from fastapi import BackgroundTasks
+def processar_proximo_fila(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         fila = db.execute(text(fila_sql), {'user_id': tenant_id, 'st': 'capturado'}).fetchone()
@@ -504,12 +495,11 @@ async def processar_proximo_fila(db: Session = Depends(get_db), usuario: dict = 
 
 
 @router.get('/desqualificados')
-async def get_leads_desqualificados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_leads_desqualificados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         result = db.execute(text(desq_sql), {'user_id': tenant_id}).fetchall()
         leads = []
-        import json
         for r in result:
             d = dict(r._mapping)
             dc = d.get('dados_completos')
@@ -531,7 +521,7 @@ async def get_leads_desqualificados(db: Session = Depends(get_db), usuario: dict
 
 # 2.1 — Leads incompletos/rejeitados para revisão manual
 @router.get('/incompletos')
-async def get_leads_incompletos(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_leads_incompletos(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         result = db.execute(text("""
@@ -556,7 +546,7 @@ async def get_leads_incompletos(db: Session = Depends(get_db), usuario: dict = D
 
 # 2.1 — Aprovar lead manualmente para o pipeline
 @router.patch('/{lead_id}/aprovar-pipeline')
-async def aprovar_lead_pipeline(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def aprovar_lead_pipeline(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
         lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
@@ -577,7 +567,7 @@ async def aprovar_lead_pipeline(lead_id: str, db: Session = Depends(get_db), usu
 
 # 2.2 — Descartar lead manualmente
 @router.patch('/{lead_id}/descartar')
-async def descartar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def descartar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
         lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
@@ -609,7 +599,7 @@ class CamposLeadRequest(_BM3):
     status: _Opt3[str] = None
 
 @router.patch('/{lead_id}/campos')
-async def atualizar_campos_lead(lead_id: str, req: CamposLeadRequest, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def atualizar_campos_lead(lead_id: str, req: CamposLeadRequest, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get("tenant_id", usuario["id"])
         lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
@@ -650,7 +640,7 @@ async def atualizar_campos_lead(lead_id: str, req: CamposLeadRequest, db: Sessio
 
 # 2.2 — Fila de leads qualificados aguardando pipeline
 @router.get('/fila-qualificados')
-async def get_fila_qualificados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_fila_qualificados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Fila de atendimento: apenas leads que completaram pipeline (site pronto, aguardando SDR enviar msg)"""
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
@@ -675,7 +665,7 @@ async def get_fila_qualificados(db: Session = Depends(get_db), usuario: dict = D
 
 
 @router.get('/descartados')
-async def get_descartados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def get_descartados(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         result = db.execute(text("""
@@ -694,7 +684,7 @@ async def get_descartados(db: Session = Depends(get_db), usuario: dict = Depends
 
 # 2.3 — Deletar lead
 @router.delete('/{lead_id}')
-async def deletar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def deletar_lead(lead_id: str, db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     try:
         tenant_id = usuario.get('tenant_id', usuario['id'])
         lead = db.execute(text("SELECT id FROM leads WHERE id=:id AND user_id=:uid"), {"id": lead_id, "uid": tenant_id}).fetchone()
@@ -718,7 +708,7 @@ class FeedbackRequest(BaseModel):
     observacao: str = ""
 
 @router.post('/{lead_id}/feedback')
-async def registrar_feedback(
+def registrar_feedback(
     lead_id: str,
     req: FeedbackRequest,
     db: Session = Depends(get_db),
@@ -889,7 +879,7 @@ async def enviar_mensagem_lead(lead_id: str, db: Session = Depends(get_db), usua
 
 
 @router.get("/escalados")
-async def listar_leads_escalados(
+def listar_leads_escalados(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ):
@@ -943,7 +933,7 @@ async def listar_leads_escalados(
 
 
 @router.get("/travados")
-async def listar_leads_travados(
+def listar_leads_travados(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ):
@@ -993,7 +983,7 @@ async def listar_leads_travados(
 
 
 @router.post("/archive-all")
-async def archive_all_leads(
+def archive_all_leads(
     body: dict = None,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
@@ -1029,7 +1019,7 @@ async def archive_all_leads(
 
 
 @router.get("/conversas-ativas")
-async def listar_conversas_ativas(
+def listar_conversas_ativas(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user),
 ):

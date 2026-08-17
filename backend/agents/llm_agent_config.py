@@ -3,7 +3,6 @@
 Agent configuration module for FraLib LLM client.
 Handles agent model configs from DB, cache, and hardcoded fallbacks.
 """
-from __future__ import annotations
 
 import time as _time
 

@@ -1,6 +1,5 @@
 """Cache controls used by controlled cold pipeline reruns."""
 
-from __future__ import annotations
 
 import hashlib
 import logging

@@ -1,6 +1,5 @@
 """Deterministic Design DNA mixer over the existing design token library."""
 
-from __future__ import annotations
 
 import hashlib
 import random

@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from pydantic import BaseModel
 from datetime import datetime
 
 from database import get_db
@@ -51,7 +50,6 @@ async def get_fila_status(db: Session = Depends(get_db), usuario: dict = Depends
 @router.get("/status")
 async def get_status(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Status resumido do pipeline."""
-    from database import get_pipeline_state
     tenant_id = usuario.get("tenant_id", usuario["id"])
     pipeline_state = get_pipeline_state(db, tenant_id)
     return {

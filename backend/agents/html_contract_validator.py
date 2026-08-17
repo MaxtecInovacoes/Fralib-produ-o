@@ -1,6 +1,5 @@
 """Contract validations for generated HTML (SEO, LGPD, Phase 6)."""
 
-from __future__ import annotations
 
 import re
 

@@ -14,10 +14,6 @@ Fluxo por seção:
 Isso garante que CADA seção sai perfeita sem depender da Liz depois.
 """
 import json
-import os
-import re
-import sys
-import time
 
 from backend.agents.liam_tools import execute_tool
 

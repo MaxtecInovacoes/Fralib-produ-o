@@ -23,26 +23,6 @@ STAGES:
 ═══════════════════════════════════════════════════════════════════════════════
 """
 
-from .agent import SDRGraph, get_sdr_graph
-from .state import SDRState, LeadMemory, StageEnum
-from .compat import (
-    iniciar_contato,
-    responder_lead,
-    followup_automatico,
-    gerar_followup,
-    BryanInput,
-    BryanOutput,
-    FranzInput,
-    FranzOutput,
-    ESTADOS_SDR,
-    ESTADO_TO_STAGE,
-    _HORARIO_CACHE,
-    _dentro_do_horario,
-    _escolher_variante,
-    _agent_name_for_user,
-    _get_horario_config,
-    _get_sdr_settings_for_user,
-)
 
 __all__ = [
     "SDRGraph",

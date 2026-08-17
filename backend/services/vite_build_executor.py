@@ -1,6 +1,5 @@
 """Vite/React build and execution utilities."""
 
-from __future__ import annotations
 
 import os
 import shutil

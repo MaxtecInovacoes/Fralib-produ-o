@@ -27,7 +27,6 @@ Uso:
     errors = search_failures("OpenUI Builder timeout", limit=10)
 """
 
-from __future__ import annotations
 
 import logging
 import os
@@ -189,7 +188,6 @@ def index_failure(
         return None
     db = SessionLocal()
     try:
-        import json as _json
         embedding = _get_embedding(f"[{step_name}] {text}")
         if embedding is None:
             return None

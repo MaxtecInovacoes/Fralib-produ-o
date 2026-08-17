@@ -1,6 +1,5 @@
 """Renderer/publication support helpers for the pipeline orchestrator."""
 
-from __future__ import annotations
 
 import os
 import re

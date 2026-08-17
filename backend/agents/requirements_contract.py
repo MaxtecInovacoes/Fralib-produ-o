@@ -1,6 +1,5 @@
 """Deterministic factual requirements contract for site generation."""
 
-from __future__ import annotations
 
 from typing import Any
 

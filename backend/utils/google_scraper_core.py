@@ -281,7 +281,6 @@ class GoogleLocalScraper:
         return None
 
     async def buscar_detalhe_unico(self, nome: str, cidade: str):
-        from playwright.async_api import async_playwright
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=self.headless, args=_playwright_launch_args())
             context = await browser.new_context(
@@ -307,7 +306,6 @@ class GoogleLocalScraper:
                 await browser.close()
 
     async def buscar_somente_cards(self, query: str, cidade: str, limite: int = 10):
-        from playwright.async_api import async_playwright
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=self.headless, args=_playwright_launch_args())
             context = await browser.new_context(

@@ -9,6 +9,7 @@ State central persiste entre transicoes (em memoria).
 Este arquivo e o barrel publico — re-exports de todos os submodulos.
 """
 import os
+from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint, get_dados_agente, resumo_checkpoint
 
 # Feature flag: usa Quality Gate v2 (Playwright + Vision) em vez do v1 (regex)
 USE_QA_V2 = os.getenv("FRALIB_QA_V2", "true").lower() in ("1", "true", "yes")
@@ -69,8 +70,6 @@ def _save_resume_checkpoint(state: PipelineState) -> None:
     if not state.tenant_id or not state.lead_id:
         return
     try:
-        from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint
-
         pipeline_id = gerar_pipeline_id(
             state.tenant_id,
             state.lead_data.get("nome", "") if state.lead_data else "",
@@ -95,8 +94,6 @@ def _hydrate_from_checkpoint(state: PipelineState) -> PipelineState:
         return state
 
     try:
-        from backend.agents.pipeline_checkpoint import gerar_pipeline_id, get_dados_agente, resumo_checkpoint
-
         pipeline_id = gerar_pipeline_id(
             state.tenant_id,
             state.lead_data.get("nome", "") if state.lead_data else "",
@@ -138,7 +135,6 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
     trace: opcional — instancia de observability.Trace para spans de fase.
     """
     try:
-        import traceback
         state = _hydrate_from_checkpoint(state)
         max_passes = 10  # safety contra loop inesperado
         passes = 0

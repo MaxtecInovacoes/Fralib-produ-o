@@ -6,11 +6,9 @@ opcional com Haiku call quando confidence < threshold.
 Saida: Intent + confidence + signals (quais matches foram encontrados).
 """
 
-from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 # Re-import do enum localmente pra evitar import circular

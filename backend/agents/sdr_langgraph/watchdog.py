@@ -14,7 +14,6 @@ O NOVO FRANZ:
 4. Cooldown sempre respeitado
 """
 
-from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import text
 
