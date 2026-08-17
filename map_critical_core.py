@@ -118,8 +118,12 @@ def audit_health(path: Path, tree: Optional[ast.AST], src: str) -> list[dict]:
         for node in ast.walk(tree):
             if isinstance(node, ast.AsyncFunctionDef):
                 body = ast.unparse(node)
+                # Strip FastAPI request.session dict access and URL path strings
+                # before scanning — both trigger false positives on the heuristic.
+                clean = re.sub(r'request\.session\b', '', body)
+                clean = re.sub(r'["\'][^"\']*session[^"\']*["\']', '', clean)
                 if re.search(
-                    r"session(\.|\(|query|execute|commit|rollback|close)", body
+                    r"\bsession(\.|\(|query|execute|commit|rollback|close)", clean
                 ):
                     issues.append(
                         {
