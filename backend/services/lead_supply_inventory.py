@@ -335,6 +335,15 @@ def _store_candidate(db: Session, tenant_id: int, candidate: Any, segmento: str,
     return str(existing[0]) if existing else inv_id, False
 
 
+def _count_sites_done(db: Session, tenant_id: int) -> int:
+    """Return total sites_done for this tenant — used for tick chaining."""
+    row = db.execute(
+        text("SELECT COUNT(*) FROM lead_inventory WHERE tenant_id=:uid AND status='site_done'"),
+        {"uid": tenant_id},
+    ).fetchone()
+    return int(row[0] or 0)
+
+
 def _enqueue_caio(db: Session, tenant_id: int, inventory_id: str) -> None:
     """Enqueue a Caio qualification job for a lead."""
     job_queue.enqueue(
@@ -515,6 +524,7 @@ def handle_pipeline_job_finished(
     payload = dict(job.get("payload") or {})
     inv_id = payload.get("_inventory_id")
     tenant_id = job.get("tenant_id")
+    quantidade_solicitada = int(payload.get("quantidade") or payload.get("quantidade_solicitada") or 0)
     if not inv_id or not tenant_id:
         return
     ensure_schema(db)
@@ -531,8 +541,16 @@ def handle_pipeline_job_finished(
             {"id": inv_id, "uid": tenant_id},
         )
         db.commit()
-        _event(db, tenant_id, "producao", "success", "Site concluído. Próximo lead será puxado pelo controle de plano.")
-        enqueue_production_tick(db, tenant_id, delay_seconds=5, reason="pipeline-success")
+        _event(db, tenant_id, "producao", "success", "Site concluído.")
+        # Chaining: se ainda há leads pendentes, enfileirar próximo tick com delay reduzido
+        if quantidade_solicitada > 0:
+            remaining = quantidade_solicitada - _count_sites_done(db, tenant_id)
+            if remaining > 0:
+                enqueue_production_tick(db, tenant_id, delay_seconds=2, reason="tick-chain-remaining")
+            else:
+                _event(db, tenant_id, "producao", "success", f"Esteira concluída: {quantidade_solicitada}/{quantidade_solicitada} sites prontos.")
+        else:
+            enqueue_production_tick(db, tenant_id, delay_seconds=5, reason="pipeline-success")
         sync_supply(db, tenant_id)
         return
     if job_status == "pending":

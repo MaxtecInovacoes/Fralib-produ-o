@@ -32,6 +32,8 @@ async def run_hunter_job(db: Session, payload: dict[str, Any], tenant_id: int) -
     needed = max(0, int(cfg["estoque_alvo"]) - useful)
     if payload.get("force"):
         needed = max(needed, int(payload.get("quantidade") or 1))
+    # Margem de 1.5x para absorver descartes do Caio sem parar a esteira
+    needed = int(needed * 1.5)
     if needed <= 0:
         _event(db, tenant_id, "hunter", "info", "Estoque alvo já está completo")
         return {"ok": True, "captured": 0, "needed": 0}

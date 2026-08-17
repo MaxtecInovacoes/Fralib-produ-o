@@ -66,6 +66,8 @@ class Ledger:
         "bloqueado_por": None,
     })
     decisoes: list = field(default_factory=list)
+    total_leads: int = 0
+    leads_processados: int = 0
 
     def registrar_inicio_fase(self, fase: int, nome: str, modelo: str = None):
         self.assignments["fase_atual"] = fase
