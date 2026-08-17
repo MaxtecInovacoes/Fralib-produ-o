@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import httpx
 import asyncio
+import time
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from auth import get_current_user
@@ -59,7 +60,7 @@ async def whatsapp_status(usuario: dict = Depends(get_current_user)):
         return {"status": "error", "detail": str(e)}
 
 @router.post("/connect")
-async def whatsapp_connect(
+def whatsapp_connect(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
 ):
@@ -70,8 +71,8 @@ async def whatsapp_connect(
 
     # Verificar se já está conectado — não reconectar
     try:
-        async with httpx.AsyncClient(timeout=5) as c:
-            r = await c.get(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/status", headers=_headers())
+        with httpx.Client(timeout=5) as c:
+            r = c.get(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/status", headers=_headers())
             if r.status_code == 200:
                 data = r.json()
                 if data.get("connected") or data.get("status") == "connected":
@@ -81,24 +82,24 @@ async def whatsapp_connect(
 
     try:
         # 1. Desconectar sessão existente no meowhats
-        async with httpx.AsyncClient(timeout=10) as c:
-            await c.post(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/disconnect", headers=_headers())
-            await asyncio.sleep(1)
+        with httpx.Client(timeout=10) as c:
+            c.post(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/disconnect", headers=_headers())
+            time.sleep(1)
 
         # 2. Limpar sessão antiga do banco (forçar novo QR)
         _limpar_sessao_db(tenant_id)
-        await asyncio.sleep(1)
+        time.sleep(1)
 
         # 3. Reiniciar meowhats pra pegar estado limpo
         import subprocess
         subprocess.run(["pm2", "restart", "meowhats"], capture_output=True, timeout=10)
-        await asyncio.sleep(3)
+        time.sleep(3)
 
         # 4. Conectar sessão nova
-        async with httpx.AsyncClient(timeout=10) as c:
-            await c.post(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/connect", headers=_headers())
-            await asyncio.sleep(4)
-            r = await c.get(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/status", headers=_headers())
+        with httpx.Client(timeout=10) as c:
+            c.post(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/connect", headers=_headers())
+            time.sleep(4)
+            r = c.get(f"{MEOWHATS_URL}/api/sessions/{tenant_id}/status", headers=_headers())
             if r.status_code == 200:
                 s = r.json()
                 if s.get("status") == "qr" and s.get("qr"):
@@ -134,7 +135,6 @@ async def whatsapp_disconnect(usuario: dict = Depends(get_current_user)):
         _limpar_sessao_db(tenant_id)
 
         # 3. Reiniciar meowhats
-        import subprocess
         subprocess.run(["pm2", "restart", "meowhats"], capture_output=True, timeout=10)
 
         return {"status": "disconnected"}
@@ -147,7 +147,7 @@ async def whatsapp_disconnect(usuario: dict = Depends(get_current_user)):
 # ══════════════════════════════════════════════════════════════════
 
 @router.get("/bot-config")
-async def get_bot_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
+def get_bot_config(db: Session = Depends(get_db), user=Depends(get_current_user)):
     """Retorna configurações do bot para o dashboard."""
     uid = user.get('id') if isinstance(user, dict) else user.id
     rows = db.execute(
@@ -161,7 +161,7 @@ async def get_bot_config(db: Session = Depends(get_db), user=Depends(get_current
 
 
 @router.post("/bot-config")
-async def update_bot_config(body: dict, db: Session = Depends(get_db), user=Depends(get_current_user)):
+def update_bot_config(body: dict, db: Session = Depends(get_db), user=Depends(get_current_user)):
     """Atualiza toggle de config do bot."""
     uid = user.get('id') if isinstance(user, dict) else user.id
     allowed_keys = ["bot_ignore_saved_contacts"]

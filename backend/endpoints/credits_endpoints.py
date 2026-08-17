@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Depends, Header
 from pydantic import BaseModel
-from typing import Optional
 import os, stripe
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -30,7 +29,7 @@ class CheckoutRequest(BaseModel):
 
 
 @router.post('/portal')
-async def criar_portal_session(
+def criar_portal_session(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
 ):
@@ -53,7 +52,7 @@ async def criar_portal_session(
 
 
 @router.post('/criar-checkout')
-async def criar_checkout(
+def criar_checkout(
     body: CheckoutRequest,
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
@@ -79,7 +78,7 @@ async def criar_checkout(
 
 
 @router.get('/status')
-async def get_status(
+def get_status(
     db: Session = Depends(get_db),
     usuario: dict = Depends(get_current_user)
 ):
@@ -181,7 +180,7 @@ async def stripe_webhook(
     # ── Processa o evento. Qualquer falha vai pra stripe_events.erro
     #    sem derrubar a resposta 200 (Stripe re-tentaria sozinho). ──
     try:
-        resolved_user_id = await _processar_evento_stripe(event, tipo, obj, stripe_customer_id)
+        resolved_user_id = _processar_evento_stripe(event, tipo, obj, stripe_customer_id)
         with engine.connect() as conn:
             conn.execute(text('''
                 UPDATE stripe_events
@@ -203,9 +202,8 @@ async def stripe_webhook(
         return {'status': 'erro_logado', 'tipo': tipo, 'erro': err_msg}
 
 
-async def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
+def _processar_evento_stripe(event, tipo, obj, stripe_customer_id):
     """Roteia o evento para o handler certo. Retorna user_id resolvido (ou None)."""
-    from database import engine
 
     if tipo in ('checkout.session.completed', 'invoice.payment_succeeded'):
         meta = obj.get('metadata') or {}
@@ -327,13 +325,13 @@ PACOTES_CREDITOS = [
 
 
 @router.get('/pricing')
-async def get_pricing():
+def get_pricing():
     """Retorna tabela de pacotes de creditos com bonus progressivo."""
     return PACOTES_CREDITOS
 
 
 @router.get('/balance')
-async def credits_balance(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def credits_balance(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Retorna saldo de creditos do usuario - compatibilidade admin.html"""
     row = db.execute(text(
         "SELECT creditos, creditos_max, plano, plan_expires_at, trial_expires_at FROM users WHERE id=:id"
@@ -350,7 +348,7 @@ async def credits_balance(db: Session = Depends(get_db), usuario: dict = Depends
 
 
 @router.get('/check')
-async def credits_check(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
+def credits_check(db: Session = Depends(get_db), usuario: dict = Depends(get_current_user)):
     """Verifica se usuario pode iniciar pipeline"""
     row = db.execute(text(
         "SELECT creditos, creditos_max, plano FROM users WHERE id=:id"
