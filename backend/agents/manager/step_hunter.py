@@ -59,7 +59,23 @@ def step_hunter(state: PipelineState) -> PipelineState:
         state.error = f"Pesquisa de mercado: {e}"
         return _transition(state, STATE_FAILED)
 
-    lead["fotos"] = []
+    try:
+        from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+
+        real_photos = lead.get("fotos") or lead.get("photos") or []
+        editorial_photos = buscar_fotos_unsplash(
+            segmento=state.segmento,
+            quantidade=max(0, 6 - len(real_photos)),
+            nome=lead.get("nome", ""),
+            cidade=state.cidade,
+        )
+        lead["fotos"] = list(dict.fromkeys([*real_photos, *editorial_photos]))[:8]
+        if len(lead["fotos"]) < 3:
+            raise RuntimeError("menos de 3 imagens disponíveis após fontes real e Unsplash")
+    except Exception as e:
+        _log_step_error(state, "Midia", e)
+        state.error = f"Mídia: {e}"
+        return _transition(state, STATE_FAILED)
 
     # Knowledge Journal: market_analyzed
     try:
