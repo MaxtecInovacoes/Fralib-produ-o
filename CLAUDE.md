@@ -39,6 +39,16 @@ Siga sempre o fluxo oficial. Não recomece do zero, não crie caminho paralelo e
 - Não editar a VPS como caminho principal.
 - Não inventar fluxo novo.
 
+## Regra de Patch Produção
+
+PROIBIDO editar arquivos no VPS de produção com scripts regex/sed (`sed`, `perl -pe`, `python -c "import re; re.sub(...)"` injetado via SSH).
+Todo patch de código ou configuração deve ser validado localmente primeiro, nesta ordem:
+
+1. `python -m py_compile <arquivos alterados>`
+2. `python tests/test_pipeline_synthetic.py`
+
+Apenas após os dois passos acima passarem, commitar no Git e só então aplicar no VPS via fluxo oficial (git push).
+
 ## Caminho Real
 `Admin/API -> jobs.pipeline_lead -> worker.py -> backend/agents/manager/agent.py -> Hunter -> Caio -> Nicho -> Design Director -> Variação -> Arquiteto -> Builder/OpenUI -> Safe Post -> Quality Gates -> Deploy -> Franz`
 

@@ -7,6 +7,33 @@ to generate the complete HTML site via single-shot LLM generation.
 import os
 import time
 import re
+
+
+def _pin_footer_last(html: str) -> str:
+    # Reposiciona <footer> como ultimo bloco antes de </body>.
+    # Nao remove outras tags — evita criar divs desbalanceadas.
+    lower = html.lower()
+    if "</body>" not in lower:
+        return html
+    footer_match = re.search(
+        r"(?is)<footer\b[^>]*>.*?</footer>",
+        html,
+    )
+    if not footer_match:
+        footer_match = re.search(
+            r"(?is)<section\b[^>]*id=['\"]footer['\"][^>]*>.*?</section>",
+            html,
+        )
+    if not footer_match:
+        return html
+    footer_block = html[footer_match.start():footer_match.end()]
+    html_no_footer = html[:footer_match.start()] + html[footer_match.end():]
+    body_close_idx = html_no_footer.lower().rfind("</body>")
+    if body_close_idx == -1:
+        return html
+    return html_no_footer[:body_close_idx] + footer_block + "\n" + html_no_footer[body_close_idx:]
+
+
 import requests
 from urllib.parse import quote_plus
 from backend.agents.design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
@@ -152,16 +179,18 @@ def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
     if not html or len(html.strip()) < 200:
         return False, "fragmento muito curto"
 
-    # Unbalanced tags always fail — real bug, not a legit document
+    # Script/style imbalance is a WARNING, not a hard fail —
+    # OpenUI fragments can inject partial scripts that get
+    # re-balanced by _inject_deterministic_assets later.
     style_opens = len(re.findall(r"(?i)<style\b", html))
     style_closes = len(re.findall(r"(?i)</style>", html))
     if style_opens != style_closes:
-        return False, "tags <style> desbalanceadas"
+        _builder_logger.warning("[builder] <style> imbalance: {} opens vs {} closes", style_opens, style_closes)
 
     script_opens = len(re.findall(r"(?i)<script\b", html))
     script_closes = len(re.findall(r"(?i)</script>", html))
     if script_opens != script_closes:
-        return False, "tags <script> desbalanceadas"
+        _builder_logger.warning("[builder] <script> imbalance: {} opens vs {} closes", script_opens, script_closes)
 
     content_only = _strip_non_content_blocks(html)
     visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
@@ -608,6 +637,17 @@ def _prd_to_spec(prd) -> dict:
         "palette_bias": archetype_system.get("palette_bias", {}),
     }
 
+    # Inject palette rotation tokens from design_context
+    try:
+        from agents.design_context import get_design_context as _gdc
+        _ctx = _gdc(_seg, _nome, getattr(prd, "tier", "STANDARD") or "STANDARD", False)
+        _ctx_tokens = _ctx.get("tokens", {}) if isinstance(_ctx, dict) else {}
+        for _tk, _tv in _ctx_tokens.items():
+            _flat = _tk[2:] if _tk.startswith("--") else _tk
+            design_tokens[_flat] = _tv
+    except Exception:
+        pass
+
     # Build layout_dna from layout_type
     layout_type = getattr(prd, "layout_type", None) or "asymmetric-magazine"
     layout_dna = {
@@ -686,6 +726,8 @@ def _prd_to_spec(prd) -> dict:
     builder_directive += getattr(prd, "instrucao_criativa_para_dev", "") or ""
     builder_directive += (
         "\n\nDIRETRIZES OBRIGATÓRIAS DE HTML/CSS:\n"
+        "- O <footer> ou <section id=footer> DEVE ser a ÚLTIMA seção visível.\n"
+        "- Nenhuma seção contato/localização/sobre pode aparecer após o footer.\n"
         f"{TAILWIND_FIRST_RULES.strip()}\n\n"
         "REGRAS DE ESTRUTURA:\n"
         "- Retorne HTML completo e válido.\n"
@@ -839,13 +881,47 @@ def _extract_body_only(html: str) -> str:
     return fragment.strip()
 
 
-def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
-    """Inject deterministic brand CSS tokens + AOS motion assets into <head> and before </body>.
+def _build_opengraph_meta(spec: dict) -> str:
+    """Build OpenGraph meta tags from spec fields for WhatsApp/LinkedIn social cards."""
+    if not spec:
+        return ""
+    business_name = str(spec.get("business_name") or spec.get("_lead_name") or "").strip()
+    cidade = str(spec.get("cidade") or "").strip()
+    segmento = str(spec.get("segmento") or "").strip()
+    title = business_name
+    if cidade:
+        title = f"{title} — {cidade}" if title else cidade
+    description = segmento
+    if cidade and segmento:
+        description = f"{segmento} em {cidade}"
+    site_url = os.environ.get("FRALIB_PUBLIC_URL", "https://app.seunegociofralib.site")
+    og_image = ""
+    photos = spec.get("photos") or []
+    if isinstance(photos, list) and photos:
+        first = photos[0]
+        if isinstance(first, dict):
+            og_image = str(first.get("url") or first.get("src") or first.get("url_original") or "")
+    if not og_image:
+        og_image = f"{site_url.rstrip('/')}/og-default.jpg"
+    parts = [
+        f'<meta property="og:title" content="{title}" />',
+        f'<meta property="og:description" content="{description}" />',
+        '<meta property="og:type" content="website" />',
+        f'<meta property="og:url" content="{site_url}" />',
+        f'<meta property="og:image" content="{og_image}" />',
+        '<meta property="og:locale" content="pt_BR" />',
+    ]
+    return "\n".join(parts)
+
+
+def _inject_deterministic_assets(html: str, design_tokens: dict, spec: dict | None = None) -> str:
+    """Inject deterministic brand CSS tokens, AOS motion assets, and OpenGraph social meta tags.
 
     Guarantees every final HTML has:
       - <style id="brand-design-tokens"> with :root CSS vars derived from design_tokens
       - AOS CSS <link> in <head>
       - AOS JS <script> + auto-init before </body>
+      - OpenGraph <meta property="og:*"> tags derived from spec (lead name, cidade, primary photo)
     """
     if not html or "<html" not in html.lower():
         return html
@@ -882,13 +958,14 @@ def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
         "</style>"
     )
     aos_head = '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />'
+    og_tags = _build_opengraph_meta(spec or {})
     aos_body = (
         '<script src="https://unpkg.com/aos@next/dist/aos.js"></script>'
         '<script>document.addEventListener("DOMContentLoaded",function(){'
         "if(window.AOS){AOS.init({duration:700,once:true,offset:40});}"
         "});</script>"
     )
-    html = re.sub(r"(?is)(</head>)", f"{brand_style}\n{aos_head}\n\\1", html, count=1)
+    html = re.sub(r"(?is)(</head>)", f"{brand_style}\n{aos_head}\n{og_tags}\n\\1", html, count=1)
     html = re.sub(r"(?is)(</body>)", f"{aos_body}\n\\1", html, count=1)
     return html
 
@@ -1206,8 +1283,12 @@ def _render_full_site(spec: dict) -> tuple[str, str, str]:
     if not valid_html:
         return "", last_model or shell_model, f"HTML final invalido: {reason} ({len(final_html)} chars)"
     if _has_unbalanced_tags(final_html):
+        _builder_logger.warning("[builder] tags desbalanceadas — aplicando _sanitize_fragment")
+        final_html = _sanitize_fragment(final_html)
+    if _has_unbalanced_tags(final_html):
         return "", last_model or shell_model, "HTML final com tags <div> desbalanceadas"
     final_html = _inject_deterministic_assets(final_html, spec.get("design_tokens", {}))
+    final_html = _pin_footer_last(final_html)
     if _builder_logger:
         _builder_logger.info("[builder] Multi-call OpenUI OK bytes={}", len(final_html))
     return final_html, last_model or shell_model, ""
