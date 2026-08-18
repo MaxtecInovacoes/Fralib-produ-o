@@ -267,7 +267,7 @@ async def buscar_lead_google_maps(
         rating=dados.get('rating', 0),
         total_avaliacoes=dados.get('total_avaliacoes', 0),
         reviews=dados.get('reviews', []),
-        fotos=dados.get('fotos', []),
+        fotos=[],
         horarios=dados.get('horarios', []),
         website=dados.get('website'),
         endereco=dados.get('endereco'),
@@ -435,7 +435,7 @@ def _lead_from_db_row(row, segmento_default: str, cidade_default: str) -> Option
             website=dados.get("website") or row.get("website") or "",
             endereco=dados.get("endereco") or row.get("endereco") or "",
             maps_url=dados.get("maps_url") or row.get("maps_url") or "",
-            fotos=dados.get("fotos") or [],
+            fotos=[],
             servicos=dados.get("servicos") or [],
             horarios=dados.get("horarios") or [],
             atributos=dados.get("atributos") or [],
@@ -820,7 +820,7 @@ async def buscar_leads_google_maps(
                     {'autor': d.get('autor', ''), 'rating': d.get('rating', 5), 'texto': d.get('texto', ''), 'data': d.get('data', '')}
                     for d in dados.get('depoimentos', [])
                 ],
-                fotos=dados.get('fotos', []),
+                fotos=[],
                 website=dados.get('website', ''),
                 endereco=dados.get('endereco', ''),
                 latitude=dados.get('latitude') or dados.get('lat'),
