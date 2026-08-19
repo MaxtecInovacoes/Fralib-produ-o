@@ -288,7 +288,7 @@ def _callar_bloco_arquiteto(
 
     prd_partial = {}
     try:
-        code_block = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', resp, re.DOTALL)
+        code_block = re.search(r'```(?:json)?\s*(\{.*\})\s*```', resp, re.DOTALL)
         if code_block:
             json_str = code_block.group(1)
         else:
@@ -297,7 +297,7 @@ def _callar_bloco_arquiteto(
             prd_partial = json.loads(json_str)
     except (json.JSONDecodeError, AttributeError) as e:
         print(f"[ArquitetoAgent] JSON parse error grupo [{campos_str}]: {e}", flush=True)
-        raise RuntimeError(f"Falha ao parsear JSON do grupo [{campos_str}]: {e}")
+        raise
 
     # Filtrar apenas campos do grupo
     filtered = {k: v for k, v in prd_partial.items() if k in campos_set}
@@ -309,45 +309,12 @@ def _callar_bloco_arquiteto(
               f"usando retorno cru: {list(prd_partial.keys())}", flush=True)
         return prd_partial
 
-    fallback = _fallback_group_fields(campos_grupo)
-    print(
-        f"[ArquitetoAgent] AVISO grupo [{campos_str}]: JSON vazio; "
-        "aplicando contrato deterministico",
-        flush=True,
+    raise RuntimeError(
+        f"[ArquitetoAgent] JSON vazio para grupo [{campos_str}] — "
+        "LLM não retornou JSON parseável. Revise o system prompt do bloco."
     )
-    return fallback
 
 
-def _fallback_group_fields(campos_grupo: list[str]) -> dict:
-    """Mantém o PRD válido quando um bloco parcial retorna texto sem JSON."""
-    defaults = {
-        "sections": [
-            {"name": "hero", "required": True},
-            {"name": "sobre", "required": True},
-            {"name": "servicos", "required": True},
-            {"name": "depoimentos", "required": True},
-            {"name": "faq", "required": True},
-            {"name": "localizacao", "required": True},
-            {"name": "contato", "required": True},
-            {"name": "footer", "required": True},
-        ],
-        "animations": [],
-        "instrucao_criativa_para_dev": "Usar pesquisa, mídia e DNA visual do lead sem repetir sites anteriores.",
-        "anti_patterns": [
-            "emoji em textos ou controles",
-            "metricas, depoimentos ou servicos inventados",
-            "layout generico repetido do mesmo nicho",
-        ],
-        "schema_org_types": ["LocalBusiness", "FAQPage"],
-        "faq_questions": [],
-        "seo_keywords": [],
-        "value_props": [],
-        "reviews_list": [],
-        "photos": [],
-        "videos": [],
-        "hours": {},
-    }
-    return {field: defaults.get(field, "") for field in campos_grupo}
 
 
 def _merge_prd_partials(partials: list[dict]) -> dict:
