@@ -275,11 +275,12 @@ def _enforce_pre_qa_contract(html: str, prd) -> str:
             cleaned,
             count=1,
         )
-    try:
-        from backend.agents.html_builder_repair import repair_builder_publication_contract
-        cleaned = repair_builder_publication_contract(cleaned, prd)
-    except ModuleNotFoundError as exc:
-        logger.warning("[Builder] reparador legado indisponível; usando contrato interno: %s", exc)
+    # FIX-1 DESATIVADO (FRA-LIB_2026.08.19):
+    # Qualquer injeção de seções/quem-somos/servicos/contato/FOOTER EXTRA
+    # pós-footer é PROIBIDA. O HTML retornado pela IA é preservado intacto.
+    # O reparador legado (html_builder_repair + html_phase6_repair) está
+    # permanentemente desligado para não duplicar blocos.
+    logger.info("[Builder] reparador phase6 desativado; HTML da IA preservado")
     cleaned = _EMOJI_RE.sub("", cleaned)
 
     photos = getattr(prd, "photos", []) or []
