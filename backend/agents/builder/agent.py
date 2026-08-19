@@ -7,33 +7,6 @@ to generate the complete HTML site via single-shot LLM generation.
 import os
 import time
 import re
-
-
-def _pin_footer_last(html: str) -> str:
-    # Reposiciona <footer> como ultimo bloco antes de </body>.
-    # Nao remove outras tags — evita criar divs desbalanceadas.
-    lower = html.lower()
-    if "</body>" not in lower:
-        return html
-    footer_match = re.search(
-        r"(?is)<footer\b[^>]*>.*?</footer>",
-        html,
-    )
-    if not footer_match:
-        footer_match = re.search(
-            r"(?is)<section\b[^>]*id=['\"]footer['\"][^>]*>.*?</section>",
-            html,
-        )
-    if not footer_match:
-        return html
-    footer_block = html[footer_match.start():footer_match.end()]
-    html_no_footer = html[:footer_match.start()] + html[footer_match.end():]
-    body_close_idx = html_no_footer.lower().rfind("</body>")
-    if body_close_idx == -1:
-        return html
-    return html_no_footer[:body_close_idx] + footer_block + "\n" + html_no_footer[body_close_idx:]
-
-
 import requests
 from urllib.parse import quote_plus
 from backend.agents.design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
@@ -169,28 +142,19 @@ def _strip_non_content_blocks(html: str) -> str:
 
 
 def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
-    """Reject style/script-heavy fragments before they poison the final page.
-
-    Permissive mode: complete HTML documents (<html + <body + <main + 200+ chars
-    of structured visible text) are allowed to contain legit scripts/styles
-    (analytics, GTM, AOS, etc.) — we still enforce balanced tags and structural
-    checks so genuinely broken fragments are still rejected.
-    """
+    """Reject style/script-heavy fragments before they poison the final page."""
     if not html or len(html.strip()) < 200:
         return False, "fragmento muito curto"
 
-    # Script/style imbalance is a WARNING, not a hard fail —
-    # OpenUI fragments can inject partial scripts that get
-    # re-balanced by _inject_deterministic_assets later.
     style_opens = len(re.findall(r"(?i)<style\b", html))
     style_closes = len(re.findall(r"(?i)</style>", html))
     if style_opens != style_closes:
-        _builder_logger.warning("[builder] <style> imbalance: {} opens vs {} closes", style_opens, style_closes)
+        return False, "tags <style> desbalanceadas"
 
     script_opens = len(re.findall(r"(?i)<script\b", html))
     script_closes = len(re.findall(r"(?i)</script>", html))
     if script_opens != script_closes:
-        _builder_logger.warning("[builder] <script> imbalance: {} opens vs {} closes", script_opens, script_closes)
+        return False, "tags <script> desbalanceadas"
 
     content_only = _strip_non_content_blocks(html)
     visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
@@ -211,17 +175,8 @@ def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
         return False, f"poucas secoes ({section_count})"
     if h1_count == 0:
         return False, "sem tag <h1>"
-
-    # Complete documents may contain legit scripts/styles — skip blanket rejection
-    is_complete_doc = (
-        "<html" in lower
-        and "<body" in lower
-        and main_count > 0
-        and len(visible_text) > 200
-    )
-    if not is_complete_doc:
-        if "<script" in lower or "<style" in lower:
-            return False, "bloco ainda contem style/script apos limpeza"
+    if "<script" in lower or "<style" in lower:
+        return False, "bloco ainda contem style/script apos limpeza"
 
     return True, ""
 
@@ -637,17 +592,6 @@ def _prd_to_spec(prd) -> dict:
         "palette_bias": archetype_system.get("palette_bias", {}),
     }
 
-    # Inject palette rotation tokens from design_context
-    try:
-        from agents.design_context import get_design_context as _gdc
-        _ctx = _gdc(_seg, _nome, getattr(prd, "tier", "STANDARD") or "STANDARD", False)
-        _ctx_tokens = _ctx.get("tokens", {}) if isinstance(_ctx, dict) else {}
-        for _tk, _tv in _ctx_tokens.items():
-            _flat = _tk[2:] if _tk.startswith("--") else _tk
-            design_tokens[_flat] = _tv
-    except Exception:
-        pass
-
     # Build layout_dna from layout_type
     layout_type = getattr(prd, "layout_type", None) or "asymmetric-magazine"
     layout_dna = {
@@ -722,12 +666,12 @@ def _prd_to_spec(prd) -> dict:
     }
 
     # Build builder_directive
+    archetype_slug_for_directive = getattr(prd, "design_system_slug", None) or "editorial-asymmetric"
+    archetype_briefing = _archetype_briefing(archetype_slug_for_directive)
     builder_directive = f"Landing page para {prd.business_name} ({getattr(prd, 'segmento', '')}) em {getattr(prd, 'cidade', '')}. "
     builder_directive += getattr(prd, "instrucao_criativa_para_dev", "") or ""
     builder_directive += (
         "\n\nDIRETRIZES OBRIGATÓRIAS DE HTML/CSS:\n"
-        "- O <footer> ou <section id=footer> DEVE ser a ÚLTIMA seção visível.\n"
-        "- Nenhuma seção contato/localização/sobre pode aparecer após o footer.\n"
         f"{TAILWIND_FIRST_RULES.strip()}\n\n"
         "REGRAS DE ESTRUTURA:\n"
         "- Retorne HTML completo e válido.\n"
@@ -749,6 +693,20 @@ def _prd_to_spec(prd) -> dict:
         "- Smooth scroll em links internos (#planos, #modalidades, #contato): scroll-behavior:smooth no html.\n"
         "- Hover em cards: classes \"hover:scale-[1.02] hover:border-primary transition-all duration-300\".\n"
         "- CTA buttons: hover:brightness-1.1 hover:shadow-lg com transição 200ms.\n"
+        "ARQUÉTIPO VISUAL ATIVO (OBRIGATÓRIO):\n"
+        f"- {archetype_briefing}\n"
+        f"- Fontes: heading={archetype_system.get('heading_font','Inter')}, "
+        f"body={archetype_system.get('body_font','Inter')}, "
+        f"border-radius={archetype_system.get('border_radius','8px')}.\n"
+        f"- Card style: {archetype_system.get('card_style','shadow-elevated')}.\n"
+        "FAQ NATIVO HTML5 (OBRIGATÓRIO):\n"
+        "- Cada pergunta do FAQ DEVE usar <details class=\"bg-[var(--surface)] border border-[var(--border)] "
+        'rounded-[var(--radius)] p-4\"> e <summary class=\"font-bold text-[var(--foreground)] cursor-pointer\">.\n'
+        "  Nunca use listas <ul>/<li> ou acordeão JavaScript puro para FAQ.\n"
+        "SHIELD DE TEXTO DECORATIVO (OBRIGATÓRIO):\n"
+        "- Qualquer texto decorativo de fundo (ex: \'FALE\', \'TREINE\', marca d\'\u00e1gua) "
+        'DEVE ter exatamente as classes: absolute -z-10 opacity-[0.03] select-none pointer-events-none.\n'
+        "- NUNCA posicione texto decorativo sobre dados de contato, CTA ou áreas de ação.\n"
     )
 
     spec = {
@@ -881,47 +839,13 @@ def _extract_body_only(html: str) -> str:
     return fragment.strip()
 
 
-def _build_opengraph_meta(spec: dict) -> str:
-    """Build OpenGraph meta tags from spec fields for WhatsApp/LinkedIn social cards."""
-    if not spec:
-        return ""
-    business_name = str(spec.get("business_name") or spec.get("_lead_name") or "").strip()
-    cidade = str(spec.get("cidade") or "").strip()
-    segmento = str(spec.get("segmento") or "").strip()
-    title = business_name
-    if cidade:
-        title = f"{title} — {cidade}" if title else cidade
-    description = segmento
-    if cidade and segmento:
-        description = f"{segmento} em {cidade}"
-    site_url = os.environ.get("FRALIB_PUBLIC_URL", "https://app.seunegociofralib.site")
-    og_image = ""
-    photos = spec.get("photos") or []
-    if isinstance(photos, list) and photos:
-        first = photos[0]
-        if isinstance(first, dict):
-            og_image = str(first.get("url") or first.get("src") or first.get("url_original") or "")
-    if not og_image:
-        og_image = f"{site_url.rstrip('/')}/og-default.jpg"
-    parts = [
-        f'<meta property="og:title" content="{title}" />',
-        f'<meta property="og:description" content="{description}" />',
-        '<meta property="og:type" content="website" />',
-        f'<meta property="og:url" content="{site_url}" />',
-        f'<meta property="og:image" content="{og_image}" />',
-        '<meta property="og:locale" content="pt_BR" />',
-    ]
-    return "\n".join(parts)
-
-
-def _inject_deterministic_assets(html: str, design_tokens: dict, spec: dict | None = None) -> str:
-    """Inject deterministic brand CSS tokens, AOS motion assets, and OpenGraph social meta tags.
+def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
+    """Inject deterministic brand CSS tokens + AOS motion assets into <head> and before </body>.
 
     Guarantees every final HTML has:
       - <style id="brand-design-tokens"> with :root CSS vars derived from design_tokens
       - AOS CSS <link> in <head>
       - AOS JS <script> + auto-init before </body>
-      - OpenGraph <meta property="og:*"> tags derived from spec (lead name, cidade, primary photo)
     """
     if not html or "<html" not in html.lower():
         return html
@@ -950,60 +874,31 @@ def _inject_deterministic_assets(html: str, design_tokens: dict, spec: dict | No
     border    = _first("border", "--border") or "#e5e7eb"
     muted     = _first("muted", "--muted") or "#6b7280"
 
+    radius = _first("radius", "--radius", "border_radius") or "8px"
+    heading_font = _first("heading_font", "--font-heading") or "Inter"
+    body_font = _first("body_font", "--font-body") or "Inter"
+    # Emite vars SEM prefixo (:root) para o directive consumir com var(--bg)
+    # Mantem --brand-* como fallback para estilos legados.
     brand_style = (
-        '<style id="brand-design-tokens">'
-        f":root{{--brand-primary:{primary};--brand-secondary:{secondary};"
+        '<style id="design-tokens">'
+        f":root{{"
+        f"--bg:{bg};--surface:{surface};--foreground:{text};"
+        f"--muted:{muted};--primary:{primary};--primary-fg:{text};"
+        f"--border:{border};--radius:{radius};"
+        f"--font-heading:{heading_font};--font-body:{body_font};"
+        f"--brand-primary:{primary};--brand-secondary:{secondary};"
         f"--brand-accent:{accent};--brand-bg:{bg};--brand-surface:{surface};"
         f"--brand-text:{text};--brand-border:{border};--brand-muted:{muted};}}"
         "</style>"
     )
     aos_head = '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />'
-    og_tags = _build_opengraph_meta(spec or {})
     aos_body = (
         '<script src="https://unpkg.com/aos@next/dist/aos.js"></script>'
         '<script>document.addEventListener("DOMContentLoaded",function(){'
         "if(window.AOS){AOS.init({duration:700,once:true,offset:40});}"
         "});</script>"
     )
-    whatsapp_phone = ""
-    if spec:
-        for key in ("phone", "_lead_telefone", "telephone"):
-            val = str(spec.get(key) or getattr(spec, key, None) or "").strip()
-            if val:
-                whatsapp_phone = re.sub(r"[^\d+]", "", val)
-                break
-    whatsapp_link = f"https://wa.me/{whatsapp_phone}?text=Ol%C3%A1%2C+gostaria+de+informa%C3%A7%C3%B5es" if whatsapp_phone else ""
-    whatsapp_widget = (
-        f'<a href="{whatsapp_link}" target="_blank" rel="noopener" '
-        f'class="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center '
-        f'rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600 transition-colors" '
-        f'aria-label="Contato via WhatsApp">'
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" '
-        f'class="h-7 w-7"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.511-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'
-        f'</a>'
-    ) if whatsapp_link else ""
-    lgpd_banner = (
-        '<div data-lgpd-banner id="lgpd-banner" class="fixed bottom-0 inset-x-0 z-40 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-neutral-950 px-4 py-3 text-sm text-white shadow-2xl">'
-        '<span class="min-w-0 flex-1 leading-relaxed">Usamos dados apenas para atendimento e melhoria da experiência.</span>'
-        '<button type="button" id="lgpd-accept-btn" '
-        'class="shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors" '
-        'style="background:var(--brand-accent,#e85d4a);color:var(--brand-bg,#0b0f19)">Aceitar</button>'
-        '</div>'
-        '<script>'
-        "document.addEventListener('DOMContentLoaded',function(){"
-        "var b=document.getElementById('lgpd-banner');"
-        "if(!b)return;"
-        "if(localStorage.getItem('lgpd_accepted')){b.style.display='none';return;}"
-        "var btn=document.getElementById('lgpd-accept-btn');"
-        "btn&&btn.addEventListener('click',function(){"
-        "localStorage.setItem('lgpd_accepted','1');b.style.display='none';"
-        "});"
-        "});"
-        "</script>"
-    )
-    body_widgets = "\n".join(w for w in (whatsapp_widget, lgpd_banner) if w)
-    html = re.sub(r"(?is)(</body>)", f"{body_widgets}\n\\1", html, count=1) if body_widgets else html
-    html = re.sub(r"(?is)(</head>)", f"{brand_style}\n{aos_head}\n{og_tags}\n\\1", html, count=1)
+    html = re.sub(r"(?is)(</head>)", f"{brand_style}\n{aos_head}\n\\1", html, count=1)
     html = re.sub(r"(?is)(</body>)", f"{aos_body}\n\\1", html, count=1)
     return html
 
@@ -1019,8 +914,27 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
         if not frag:
             continue
         frag = _sanitize_fragment(frag)
-        # Se o fragmento ja inicia com <section>, usa ele direto (evita <section><section>)
+        # Se o fragmento ja inicia com <section>, injeta as classes herméticas
+        # (evita <section><section>, preservando classes originais do fragmento)
         if re.match(r"(?is)<section\b", frag):
+            frag = re.sub(
+                r'(?is)(<section\b[^>]*?\sclass=)(["\'])([^"\']*?)\2',
+                lambda m: (
+                    m.group(1) + m.group(2)
+                    + ((m.group(3).strip() + " w-full block clear-both relative overflow-hidden")).strip()
+                    + m.group(2)
+                ),
+                frag,
+                count=1,
+            )
+            # fallback: se nao tem atributo class, injeta direto
+            if ' class="' not in frag.lower() and " class='" not in frag.lower():
+                frag = re.sub(
+                    r'(?is)(<section\b)',
+                    r'\1 class="w-full block clear-both relative overflow-hidden"',
+                    frag,
+                    count=1,
+                )
             wrapped.append(frag)
             continue
         # Extrai o nome da seção do primeiro <section id="..."> ou <section ...>
@@ -1028,7 +942,7 @@ def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -
         sec_id = m.group(1) if m else ""
         wrapped.append(
             f'<!-- SECTION START: {sec_id} -->\n'
-            f'<section id="{sec_id}" class="w-full relative overflow-hidden clear-both block">\n'
+            f'<section id="{sec_id}" class="w-full block clear-both relative overflow-hidden">\n'
             f'{frag}\n'
             f'</section>\n'
             f'<!-- SECTION END: {sec_id} -->'
@@ -1196,13 +1110,25 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 return "", ""
         except requests.exceptions.Timeout:
             last_error = f"OpenUI timeout attempt {attempt + 1}/{max_retries} (60s)"
+            if _builder_logger:
+                _builder_logger.warning(
+                    "[builder] Bloco [{}] timeout tentativa={}/{} causa={}",
+                    label_str, attempt + 1, max_retries, last_error,
+                )
             if attempt < max_retries - 1:
                 time.sleep(retry_delays[attempt])
                 continue
             return "", ""
         except Exception as e:
-            last_error = f"OpenUI error: {str(e)}"
-            return "", ""
+            last_error = f"OpenUI error attempt {attempt + 1}: {str(e)}"
+            if _builder_logger:
+                _builder_logger.warning(
+                    "[builder] Bloco [{}] erro rede/timeout tentativa={}/{} causa={}",
+                    label_str, attempt + 1, max_retries, last_error,
+                )
+            if attempt < max_retries - 1:
+                time.sleep(retry_delays[attempt])
+                continue
 
     if _builder_logger:
         _builder_logger.error("[builder] Bloco [{}] falhou apos {} tentativas causa={}", label_str, max_retries, last_error)
@@ -1276,6 +1202,13 @@ def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
             block_spec["_bloco_labels"] = group
             block_spec["_render_hint"] = "section_fragment"
             block_spec["_section_index"] = section_index
+            if selected and selected[0].get("name") == "hero":
+                copy_data = selected[0].get("copy_data", {}) if isinstance(selected[0].get("copy_data"), dict) else {}
+                block_spec["hero"] = {
+                    "headline": copy_data.get("h1") or copy_data.get("headline") or "",
+                    "subheadline": copy_data.get("subtitle") or copy_data.get("subheadline") or "",
+                    "cta_text": copy_data.get("cta_primary") or copy_data.get("cta") or "Fale Conosco",
+                }
             html, model = _render_block(block_spec, spec.get("design_tokens", {}))
             if not html:
                 return [], last_model, f"Falha ao gerar bloco [{', '.join(group)}]"
@@ -1285,6 +1218,19 @@ def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
             return [], last_model, "nenhum fragmento gerado"
         return partials, last_model, ""
 
+    # Ordenar secoes pela ordem do variation_blueprint (quando disponivel)
+    order_index_map = {}
+    try:
+        _vb = spec.get("variation_blueprint") or {}
+        _order = _vb.get("ordem_das_secoes") or []
+        order_index_map = {str(n).strip().lower(): i for i, n in enumerate(_order) if str(n).strip()}
+    except Exception:
+        pass
+    if order_index_map:
+        sections = sorted(
+            sections,
+            key=lambda s: order_index_map.get(str(s.get("name", "")).strip().lower(), 9999),
+        )
     # Dynamic: one OpenUI call per section
     for s in sections:
         if not isinstance(s, dict):
@@ -1295,6 +1241,13 @@ def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
         block_spec["_bloco_labels"] = [s.get("name", f"section-{section_index}")]
         block_spec["_render_hint"] = "section_fragment"
         block_spec["_section_index"] = section_index
+        if s.get("name") == "hero":
+            copy_data = s.get("copy_data", {}) if isinstance(s.get("copy_data"), dict) else {}
+            block_spec["hero"] = {
+                "headline": copy_data.get("h1") or copy_data.get("headline") or "",
+                "subheadline": copy_data.get("subtitle") or copy_data.get("subheadline") or "",
+                "cta_text": copy_data.get("cta_primary") or copy_data.get("cta") or "Fale Conosco",
+            }
         html, model = _render_block(block_spec, spec.get("design_tokens", {}))
         if not html:
             return [], last_model, f"Falha ao gerar secao [{s.get('name', '?')}]"
@@ -1317,16 +1270,12 @@ def _render_full_site(spec: dict) -> tuple[str, str, str]:
         return "", last_model or shell_model, partial_error or "falha nos fragmentos"
 
     final_html = _inject_sections_into_shell(shell_html, partials)
+    if _has_unbalanced_tags(final_html):
+        final_html = _sanitize_fragment(final_html)
     valid_html, reason = _looks_like_valid_body_fragment(final_html)
     if not valid_html:
         return "", last_model or shell_model, f"HTML final invalido: {reason} ({len(final_html)} chars)"
-    if _has_unbalanced_tags(final_html):
-        _builder_logger.warning("[builder] tags desbalanceadas — aplicando _sanitize_fragment")
-        final_html = _sanitize_fragment(final_html)
-    if _has_unbalanced_tags(final_html):
-        return "", last_model or shell_model, "HTML final com tags <div> desbalanceadas"
     final_html = _inject_deterministic_assets(final_html, spec.get("design_tokens", {}))
-    final_html = _pin_footer_last(final_html)
     if _builder_logger:
         _builder_logger.info("[builder] Multi-call OpenUI OK bytes={}", len(final_html))
     return final_html, last_model or shell_model, ""
