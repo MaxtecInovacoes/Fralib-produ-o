@@ -4,6 +4,7 @@ import os
 import json
 import re
 import html as html_lib
+import unicodedata
 from pathlib import Path
 from urllib.parse import quote_plus
 from datetime import datetime
@@ -464,9 +465,9 @@ def step_deploy(state: PipelineState) -> PipelineState:
         return state
 
     try:
-        # Slug a partir do nome do lead
-        slug = state.lead_data.get("nome", "site").lower()
-        slug = "".join(c if c.isalnum() else "-" for c in slug).strip("-")[:50]
+        # Slug canônico ASCII (NFKD normaliza acentos → ascii; colapso de separadores).
+        from backend.services.pipeline_state import gerar_slug_lead
+        slug = gerar_slug_lead(state.lead_data.get("nome", ""), max_len=50)
         if not slug:
             slug = "site"
 
@@ -479,25 +480,30 @@ def step_deploy(state: PipelineState) -> PipelineState:
         index_path = site_dir / "index.html"
         html = state.build_output.get("html", "")
 
-        # Pos-processamento tecnico seguro: nao altera decisões visuais do PRD/OpenUI.
-        try:
-            from backend.agents.cinematic_post_processor import process as cinematic_process
-            design_tokens = {}
-            if state.design_output:
-                design_tokens = state.design_output.get("tokens_oklch", {}) or {}
-            html = cinematic_process(
-                html,
-                design_tokens=design_tokens,
-                segmento=state.segmento or "",
-                nome=state.lead_data.get("nome", "") if state.lead_data else "",
-                safe_only=True,
-            )
-        except Exception as e:
-            print(f"[Deploy] Aviso: pos-processamento tecnico falhou: {e}")
+        # Pos-processamento cinematográfico DESATIVADO pelo protocolo de unificação.
+        # A injeção de assets determinísticos (head tokens, AOS, WhatsApp, LGPD)
+        # agora é responsabilidade exclusiva de _inject_deterministic_assets no Builder.
+        # try:
+        #     from backend.agents.cinematic_post_processor import process as cinematic_process
+        #     design_tokens = {}
+        #     if state.design_output:
+        #         design_tokens = state.design_output.get("tokens_oklch", {}) or {}
+        #     html = cinematic_process(
+        #         html,
+        #         design_tokens=design_tokens,
+        #         segmento=state.segmento or "",
+        #         nome=state.lead_data.get("nome", "") if state.lead_data else "",
+        #         safe_only=True,
+        #     )
+        # except Exception as e:
+        #     print(f"[Deploy] Aviso: pos-processamento tecnico falhou: {e}")
 
         html = _sanitize_deploy_html(html)
+        # _ensure_final_document_contract DESATIVADO pelo protocolo de unificação.
+        # Head additions (title, og, canonical, JSON-LD) e phone substitutions
+        # destrutivas agora são responsabilidade do Builder (_inject_deterministic_assets).
         final_url = f"https://app.seunegociofralib.site/sites/{state.tenant_id}/{slug}-{state.lead_id[:8]}/"
-        html = _ensure_final_document_contract(html, state, final_url)
+        # html = _ensure_final_document_contract(html, state, final_url)
         index_path.write_text(html, encoding="utf-8")
         _record_agent_handoff(
             state,

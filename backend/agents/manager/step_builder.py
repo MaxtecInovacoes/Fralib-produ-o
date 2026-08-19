@@ -303,12 +303,10 @@ def _enforce_pre_qa_contract(html: str, prd) -> str:
     required_markers = {
         "imagem": r"(?is)<img\b|background-image\s*:",
         "faq": r"(?is)faq|perguntas frequentes|faq-section",
-        "footer": r"(?is)<footer\b|id\s*=\s*[\x22\x27]footer[\x22\x27]|role\s*=\s*[\x22\x27]contentinfo[\x22\x27]",
         "descricao": r"(?is)<meta\s+name=[\"']description[\"']",
         "open_graph": r"(?is)<meta\s+property=[\"']og:",
         "favicon": r"(?is)<link\s+rel=[\"']icon[\"']",
         "json_ld": r"(?is)application/ld\+json",
-        "lgpd": r"(?is)data-lgpd-banner|lgpd|privacidade|Aceitar",
     }
     missing = [name for name, pattern in required_markers.items() if not re.search(pattern, cleaned)]
     if missing:
@@ -358,41 +356,4 @@ def _ensure_internal_publication_contract(html: str, prd) -> str:
     if additions:
         cleaned = re.sub(r"(?is)</head>", "\n".join(additions) + "\n</head>", cleaned, count=1)
 
-    has_semantic_footer = (
-        "<footer" in cleaned.lower()
-        or 'id="footer"' in cleaned.lower()
-        or "section:footer" in cleaned.lower()
-    )
-    if not has_semantic_footer:
-        footer = (
-            f'<footer id="footer" class="px-6 py-12 bg-neutral-950 text-white">'
-            f'<div class="mx-auto max-w-6xl grid gap-6 md:grid-cols-3">'
-            f'<div><p class="text-lg font-semibold">{name}</p><p>{address or city}</p><p>{phone}</p></div>'
-            '<div><p class="font-semibold">Contato e suporte</p><p>Atendimento oficial pelos canais desta página.</p></div>'
-            '<div><p class="font-semibold">Privacidade</p><p id="footer-privacy-notice">Dados usados apenas para atendimento, retorno comercial e continuidade da experiência.</p></div>'
-            '</div></footer>'
-        )
-        cleaned = re.sub(r"(?is)</body>", footer + "\n</body>", cleaned, count=1)
-        if "<footer" not in cleaned.lower() and 'id="footer"' not in cleaned.lower():
-            cleaned += footer
-    if "data-lgpd-banner" in cleaned.lower() and "data-lgpd-accept" not in cleaned.lower():
-        cleaned = re.sub(
-            r'(?is)(<[^>]*data-lgpd-banner[^>]*>.*?)(<button\b[^>]*>)(.*?)(</button>)',
-            lambda m: (
-                m.group(1)
-                + '<button type="button" data-lgpd-accept class="shrink-0 rounded-full px-4 py-2 font-semibold" '
-                + 'style="background:var(--accent,#e85d4a);color:var(--bg,#0b0f19)">'
-                + m.group(3)
-                + "</button>"
-            ),
-            cleaned,
-            count=1,
-        )
-    elif "data-lgpd-banner" not in cleaned.lower():
-        banner = (
-            '<div data-lgpd-banner class="fixed bottom-4 left-4 right-4 z-50 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-neutral-950/95 px-4 py-3 text-white shadow-2xl backdrop-blur">'
-            '<span class="min-w-0 flex-1 text-sm leading-6">Usamos dados apenas para atendimento e melhoria da experiência.</span>'
-            '<button type="button" data-lgpd-accept class="shrink-0 rounded-full px-4 py-2 font-semibold" style="background:var(--accent,#e85d4a);color:var(--bg,#0b0f19)">Aceitar</button></div>'
-        )
-        cleaned = re.sub(r"(?is)</body>", banner + "\n</body>", cleaned, count=1)
     return cleaned
