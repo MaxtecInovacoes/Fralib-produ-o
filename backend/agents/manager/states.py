@@ -61,6 +61,7 @@ class PipelineState:
     estado_manual: str = ""
     paused_by: Optional[str] = None
     forcar_renovacao: bool = False
+    phase_timeline: list[dict] = field(default_factory=list)
 
 
 def _transition(state: PipelineState, new_state: str) -> PipelineState:
@@ -196,3 +197,37 @@ def _log_step_error(state: PipelineState, step_name: str, exc: Exception) -> Non
         )
     except Exception as db_err:
         logger.warning("Pipeline error DB persist failed: %s", db_err)
+
+
+def _record_phase_timeline(
+    state: PipelineState,
+    step_name: str,
+    *,
+    started_at: float,
+    finished_at: float,
+    status: str,
+    error: str = "",
+) -> None:
+    """Append a phase timeline entry for observability.
+
+    Cada entrada registra: step, iniciado_em, finalizado_em, duracao_ms,
+    status (success/error/skipped), erro (se houver).
+
+    O worker persiste state.phase_timeline em jobs.payload antes de
+    marcar o job como completed/failed.
+    """
+    try:
+        entry = {
+            "step": step_name,
+            "iniciado_em": started_at,
+            "finalizado_em": finished_at,
+            "duracao_ms": int((finished_at - started_at) * 1000),
+            "status": status,
+            "error": (error or "")[:500],
+        }
+        state.phase_timeline.append(entry)
+    except Exception as exc:
+        logger.warning(
+            "phase_timeline registro falhou step=%s lead_id=%s: %s",
+            step_name, getattr(state, "lead_id", ""), exc,
+        )

@@ -9,6 +9,8 @@ State central persiste entre transicoes (em memoria).
 Este arquivo e o barrel publico — re-exports de todos os submodulos.
 """
 import os
+import time
+
 from backend.agents.pipeline_checkpoint import gerar_pipeline_id, salvar_checkpoint, get_dados_agente, resumo_checkpoint
 
 # Feature flag: usa Quality Gate v2 (Playwright + Vision) em vez do v1 (regex)
@@ -158,17 +160,38 @@ def run_pipeline(state: PipelineState, trace: object = None) -> PipelineState:
             passes += 1
             prev_state = state.current_state
             for step in PIPELINE_STEPS:
+                step_name = step.__name__.replace("step_", "")
+                step_started_at = time.monotonic()
+                step_error = ""
                 # Observability: iniciar span para este step
                 if _t is not None:
-                    step_name = step.__name__.replace("step_", "")
                     span = _t.iniciar_span(f"step_{step_name}", step_name, "")
-                state = step(state)
-                # Observability: finalizar span
-                if _t is not None:
-                    _span = _t.span_atual()
-                    if _span and _span.nome == f"step_{step_name}":
-                        s = "success" if state.current_state not in (STATE_FAILED,) else "error"
-                        _span.finalizar(s)
+                try:
+                    state = step(state)
+                except Exception as exc:
+                    step_status = "error"
+                    step_error = str(exc)
+                    raise
+                else:
+                    step_status = "success" if state.current_state not in (STATE_FAILED,) else "error"
+                finally:
+                    # Phase timeline: registrar start/end/duration/status
+                    try:
+                        from backend.agents.manager.states import _record_phase_timeline
+                        _record_phase_timeline(
+                            state, step_name,
+                            started_at=step_started_at,
+                            finished_at=time.monotonic(),
+                            status=step_status,
+                            error=step_error,
+                        )
+                    except Exception as _tl_exc:
+                        logger.debug("phase_timeline recording failed: %s", _tl_exc)
+                    # Observability: finalizar span
+                    if _t is not None:
+                        _span = _t.span_atual()
+                        if _span and _span.nome == f"step_{step_name}":
+                            _span.finalizar(step_status)
                 # Atualiza phase/agent conforme transicao do pipeline
                 new_state = state.current_state
                 if new_state != prev_state:

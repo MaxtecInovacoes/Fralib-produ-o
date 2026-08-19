@@ -401,6 +401,27 @@ def _run_pipeline_job(db, job) -> bool:
         fase=final.current_state,
         mensagem=final.error or None,
     )
+    # ── Observability: persistir phase_timeline em jobs.payload ──
+    try:
+        timeline = getattr(final, "phase_timeline", []) or []
+        if timeline:
+            _existing_payload = job.get("payload") or {}
+            if isinstance(_existing_payload, str):
+                import json as _json
+                _existing_payload = _json.loads(_existing_payload)
+            _merged = dict(_existing_payload)
+            _merged["phase_timeline"] = timeline
+            db.execute(
+                text("UPDATE jobs SET payload = :payload WHERE id = :id"),
+                {"payload": _merged, "id": job["id"]},
+            )
+            db.commit()
+            logger.info(
+                "[OBS] phase_timeline salva: job=%s passos=%d",
+                job["id"], len(timeline),
+            )
+    except Exception as timeline_e:
+        logger.warning("[OBS] Falha ao salvar phase_timeline: %s", timeline_e)
     # ── Observability: salvar trace ──
     try:
         salvar_trace(trace)
@@ -463,10 +484,19 @@ def main() -> None:
     inicializar_database()
     logger.info("Worker started (PID %s)", os.getpid())
     poll_interval = int(os.getenv("WORKER_POLL_INTERVAL", "5"))
-    while _running:
-        processed = run_one()
-        if not processed:
-            time.sleep(poll_interval)
+    try:
+        while _running:
+            processed = run_one()
+            if not processed:
+                time.sleep(poll_interval)
+    finally:
+        # Flush pendentes do Langfuse antes de morrer (evita perda de spans no SIGTERM)
+        try:
+            from backend.observability.langfuse_trace import flush as _langfuse_flush
+            _langfuse_flush()
+        except Exception:
+            pass
+        logger.info("Worker desligado")
 
 
 if __name__ == "__main__":
