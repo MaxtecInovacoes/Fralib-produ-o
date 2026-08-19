@@ -116,10 +116,19 @@ def salvar_trace(trace: Trace) -> None:
                      :complexidade, :duracao, :status,
                      :in_tok, :out_tok, :cache_hit,
                      :custo, :chamadas, :spans, NOW())
+                ON CONFLICT (trace_id) DO UPDATE SET
+                    spans_json = EXCLUDED.spans_json,
+                    status = EXCLUDED.status,
+                    duracao_total_ms = EXCLUDED.duracao_total_ms,
+                    total_input_tokens = EXCLUDED.total_input_tokens,
+                    total_output_tokens = EXCLUDED.total_output_tokens,
+                    total_cache_hit = EXCLUDED.total_cache_hit,
+                    custo_total_usd = EXCLUDED.custo_total_usd,
+                    total_chamadas_llm = EXCLUDED.total_chamadas_llm
                 """
             ),
             {
-                "trace_id": trace.run_id,
+                "trace_id": trace.trace_id,
                 "run_id": trace.run_id,
                 "tenant_id": 0,
                 "lead_nome": trace.lead_nome,
