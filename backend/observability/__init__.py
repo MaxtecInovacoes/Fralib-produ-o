@@ -128,7 +128,7 @@ def salvar_trace(trace: Trace) -> None:
                 """
             ),
             {
-                "trace_id": trace.trace_id,
+                "trace_id": trace.run_id,
                 "run_id": trace.run_id,
                 "tenant_id": 0,
                 "lead_nome": trace.lead_nome,
