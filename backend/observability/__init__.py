@@ -54,6 +54,7 @@ class Trace:
         self.duracao_total_ms: int = 0
         self.status: str = "unknown"
         self.complexidade: str = ""
+        self.trace_id: str = run_id
         self._spans: list[_Span] = []
         self._current: _Span | None = None
 
@@ -128,7 +129,7 @@ def salvar_trace(trace: Trace) -> None:
                 """
             ),
             {
-                "trace_id": trace.run_id,
+                "trace_id": trace.trace_id,
                 "run_id": trace.run_id,
                 "tenant_id": 0,
                 "lead_nome": trace.lead_nome,
