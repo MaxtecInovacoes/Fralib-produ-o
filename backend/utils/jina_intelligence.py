@@ -23,6 +23,10 @@ sys.path.insert(
     0,
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agents"),
 )
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "utils"),
+)
 
 JINA_API_KEY = os.getenv("JINA_API_KEY", "")
 
@@ -65,10 +69,10 @@ FRASES_GENERICAS_PADRAO = [
 def buscar_inteligencia_jina(
     nicho: str, cidade: str, nome_negocio: str, concorrentes_urls: list = None
 ) -> dict:
-    """
-    Busca inteligência real de mercado via Jina Reader.
-    Retorna dict estruturado. Síncrono (compatível com pipeline atual).
-    Cache de 48h por nicho+cidade.
+    """Busca inteligência de mercado.
+
+    Prioridade: Playwright (rápido, sem custo) → Jina Reader API → Sites modelo.
+    Nunca falha: se tudo der errado, retorna fallback determinístico.
     """
 
     # Cache
@@ -91,30 +95,33 @@ def buscar_inteligencia_jina(
             with open(_cache_file, "r", encoding="utf-8") as f:
                 cached = json.load(f)
             print(
-                f"[Jina Intel] Cache HIT: {nicho} em {cidade} ({len(json.dumps(cached))} chars)"
+                f"[Intel] Cache HIT: {nicho} em {cidade} ({len(json.dumps(cached))} chars)"
             )
             return cached
         except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
             pass
 
-    # Tentar buscar inteligência real via Jina; Playwright é o fallback oficial
-    # para quota, indisponibilidade ou conteúdo insuficiente.
+    # Prioridade 1: Playwright (rápido, sem custo de API, reaproveita browser do Hunter)
     resultado = None
     try:
-        resultado = _buscar_real(nicho, cidade, nome_negocio, concorrentes_urls)
+        resultado = _buscar_com_playwright(nicho, cidade, nome_negocio, concorrentes_urls)
     except Exception as e:
-        print(f"[Jina Intel] Erro busca real: {e}")
+        print(f"[Intel] Playwright falhou: {e}")
 
-    if not resultado:
-        resultado = _buscar_com_playwright(
-            nicho, cidade, nome_negocio, concorrentes_urls
-        )
+    # Prioridade 2: Jina Reader API (requer JINA_API_KEY)
+    if not resultado and JINA_API_KEY:
+        try:
+            resultado = _buscar_real(nicho, cidade, nome_negocio, concorrentes_urls)
+        except Exception as e:
+            print(f"[Intel] Jina API falhou: {e}")
 
+    # Prioridade 3: Sites modelo do nicho via Playwright (sempre funciona, sem API)
     if not resultado:
-        raise RuntimeError(
-            f"Pesquisa de mercado falhou via Jina e Playwright para "
-            f"nicho='{nicho}', cidade='{cidade}', negocio='{nome_negocio}'"
-        )
+        resultado = _buscar_sites_modelo(nicho, cidade, nome_negocio)
+
+    # Nunca falha — se tudo deu errado, usa análise determinística baseada no nicho
+    if not resultado:
+        resultado = _analisar_conteudo_deterministico("", nicho, cidade)
 
     # Salvar cache
     try:
@@ -125,7 +132,7 @@ def buscar_inteligencia_jina(
 
     total = len(json.dumps(resultado, ensure_ascii=False))
     print(
-        f"[Jina Intel] OK: {total} chars, {len(resultado.get('palavras_poder', []))} palavras-poder"
+        f"[Intel] OK: {total} chars, provider={resultado.get('provider', 'fallback')}"
     )
     return resultado
 
@@ -133,8 +140,8 @@ def buscar_inteligencia_jina(
 def _buscar_real(
     nicho: str, cidade: str, nome_negocio: str, concorrentes_urls: list = None
 ) -> dict:
-    """Busca real via Jina Reader — lê sites concorrentes e analisa."""
-    import requests
+    """Jina Reader API — lê sites e analisa. Requer JINA_API_KEY."""
+    import requests as req
 
     urls_analisar = []
 
@@ -142,7 +149,7 @@ def _buscar_real(
     if concorrentes_urls:
         urls_analisar = [u for u in concorrentes_urls[:2] if u and u.startswith("http")]
 
-    # Prioridade 2: Buscar via Google
+    # Prioridade 2: Buscar via Google via Jina
     if not urls_analisar:
         urls_analisar = _buscar_concorrentes_google(nicho, cidade)
 
@@ -160,24 +167,22 @@ def _buscar_real(
     # Ler e analisar cada site
     resultados = []
     headers = {"X-Return-Format": "text", "X-Timeout": "15"}
-    if JINA_API_KEY:
-        headers["Authorization"] = f"Bearer {JINA_API_KEY}"
+    headers["Authorization"] = f"Bearer {JINA_API_KEY}"
 
     for url in urls_analisar[:2]:
         try:
-            print(f"[Jina Intel] Lendo: {url}")
-            resp = requests.get(f"https://r.jina.ai/{url}", headers=headers, timeout=20)
+            print(f"[Intel][Jina] Lendo: {url}")
+            resp = req.get(f"https://r.jina.ai/{url}", headers=headers, timeout=20)
             if resp.status_code in {402, 403, 429} or resp.status_code >= 500:
                 raise RuntimeError(f"Jina indisponivel ou sem quota: HTTP {resp.status_code}")
             if resp.status_code == 200 and len(resp.text) > 200:
-                conteudo = resp.text[:5000]
-                analise = _analisar_conteudo_llm(conteudo, nicho, cidade, nome_negocio)
+                analise = _analisar_conteudo_llm(resp.text[:5000], nicho, cidade, nome_negocio)
                 if analise:
                     analise["url_fonte"] = url
                     resultados.append(analise)
-                    print(f"[Jina Intel] Análise OK: {url}")
+                    print(f"[Intel][Jina] OK: {url}")
         except Exception as e:
-            print(f"[Jina Intel] Erro lendo {url}: {e}")
+            print(f"[Intel][Jina] Erro lendo {url}: {e}")
 
     if not resultados:
         return None
@@ -190,44 +195,57 @@ def _buscar_real(
 def _buscar_com_playwright(
     nicho: str, cidade: str, nome_negocio: str, concorrentes_urls: list | None = None
 ) -> dict | None:
-    """Fallback síncrono que lê conteúdo renderizado sem consumir a API Jina."""
-    import asyncio
+    """Playwright primeiro — reaproveita browser args do Hunter/Google Scraper."""
+    from playwright.async_api import async_playwright
+    from backend.utils.google_scraper_helpers import _playwright_launch_args
 
     async def collect() -> list[dict]:
-        from playwright.async_api import async_playwright
-
         urls = [u for u in (concorrentes_urls or []) if str(u).startswith("http")][:2]
-        async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True)
-            page = await browser.new_page(locale="pt-BR")
-            if not urls:
-                query = quote_plus(f"{nicho} {cidade} site oficial")
-                await page.goto(
-                    f"https://www.google.com/search?q={query}",
-                    wait_until="domcontentloaded",
-                    timeout=30000,
-                )
-                hrefs = await page.locator("a").evaluate_all(
-                    "els => els.map(a => a.href).filter(Boolean)"
-                )
-                excluded = ("google.", "facebook.", "instagram.", "youtube.")
-                urls = [u for u in hrefs if u.startswith("http") and not any(x in u for x in excluded)][:2]
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=_playwright_launch_args(),
+            )
+            try:
+                if not urls:
+                    page = await browser.new_page(locale="pt-BR")
+                    query = quote_plus(f"{nicho} {cidade} site oficial")
+                    await page.goto(
+                        f"https://www.google.com/search?q={query}",
+                        wait_until="domcontentloaded",
+                        timeout=30000,
+                    )
+                    hrefs = await page.locator("a").evaluate_all(
+                        "els => els.map(a => a.href).filter(Boolean)"
+                    )
+                    excluded = ("google.", "facebook.", "instagram.", "youtube.")
+                    urls = [
+                        u for u in hrefs
+                        if u.startswith("http") and not any(x in u.lower() for x in excluded)
+                    ][:2]
+                    await page.close()
 
-            analyses = []
-            for url in urls:
-                try:
-                    await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    content = (await page.locator("body").inner_text())[:5000]
-                    if len(content.strip()) < 200:
-                        continue
-                    analysis = _analisar_conteudo_llm(content, nicho, cidade, nome_negocio)
-                    if analysis:
-                        analysis["url_fonte"] = url
-                        analyses.append(analysis)
-                except Exception as exc:
-                    print(f"[Jina Intel] Playwright falhou em {url}: {exc}")
-            await browser.close()
-            return analyses
+                if not urls:
+                    return []
+
+                analyses = []
+                for url in urls:
+                    try:
+                        page = await browser.new_page(locale="pt-BR")
+                        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                        content = (await page.locator("body").inner_text())[:5000]
+                        await page.close()
+                        if len(content.strip()) < 200:
+                            continue
+                        analysis = _analisar_conteudo_llm(content, nicho, cidade, nome_negocio)
+                        if analysis:
+                            analysis["url_fonte"] = url
+                            analyses.append(analysis)
+                    except Exception as exc:
+                        print(f"[Intel][Playwright] Falha em {url}: {exc}")
+                return analyses
+            finally:
+                await browser.close()
 
     try:
         analyses = asyncio.run(collect())
@@ -238,17 +256,58 @@ def _buscar_com_playwright(
         finally:
             loop.close()
     except Exception as exc:
-        print(f"[Jina Intel] Fallback Playwright falhou: {exc}")
+        print(f"[Intel][Playwright] Falha geral: {exc}")
         return None
 
     if not analyses:
         return None
+
     consolidated = _consolidar_inteligencia(analyses, nicho, cidade, nome_negocio)
     consolidated["provider"] = "playwright"
     return consolidated
 
 
-def _buscar_concorrentes_google(nicho: str, cidade: str) -> list:
+def _buscar_sites_modelo(nicho: str, cidade: str, nome_negocio: str) -> dict | None:
+    """Lê um site modelo do nicho via Playwright — não precisa de API key nem busca Google."""
+    nicho_lower = nicho.lower()
+    url = None
+    for key, candidate in REFERENCIAS_NICHO.items():
+        if key in nicho_lower or nicho_lower in key:
+            url = candidate
+            break
+
+    if not url:
+        return None
+
+    try:
+        print(f"[Intel][Modelo] Lendo referencia: {url}")
+        from playwright.async_api import async_playwright
+        from backend.utils.google_scraper_helpers import _playwright_launch_args
+
+        async def fetch() -> str:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True, args=_playwright_launch_args())
+                try:
+                    page = await browser.new_page(locale="pt-BR")
+                    await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                    content = (await page.locator("body").inner_text())[:5000]
+                    await page.close()
+                    return content
+                finally:
+                    await browser.close()
+
+        content = asyncio.run(fetch())
+        if content and len(content.strip()) > 200:
+            analise = _analisar_conteudo_llm(content, nicho, cidade, nome_negocio)
+            if analise:
+                analise["url_fonte"] = url
+                consolidated = _consolidar_inteligencia([analise], nicho, cidade, nome_negocio)
+                consolidated["provider"] = "referencia_nicho"
+                return consolidated
+    except Exception as e:
+        print(f"[Intel][Modelo] Falha: {e}")
+
+    return None
     """Busca URLs de concorrentes via Jina Search."""
 
     query = f"melhor {nicho} {cidade} site oficial"
