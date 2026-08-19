@@ -86,7 +86,7 @@ def _save_resume_checkpoint(state: PipelineState) -> None:
 
 
 def _hydrate_from_checkpoint(state: PipelineState) -> PipelineState:
-    """Retoma pipeline por checkpoint quando PRD/HTML já existem para o lead."""
+    """Retoma pipeline do checkpoint: restaura dados de etapas concluídas e avança o state."""
     if not state.tenant_id or not state.lead_id:
         return state
     if getattr(state, "forcar_renovacao", False):
@@ -101,17 +101,32 @@ def _hydrate_from_checkpoint(state: PipelineState) -> PipelineState:
             state.cidade,
             state.lead_id,
         )
+        resumo = resumo_checkpoint(pipeline_id)
+        if resumo == "nenhum checkpoint":
+            return state
+
+        # Hunter: se já rodou, restaura seus dados e avança para QUALIFYING
+        hunter_cached = get_dados_agente(pipeline_id, "hunter")
+        if hunter_cached and state.current_state == STATE_HUNTING:
+            state.lead_data = state.lead_data or hunter_cached.get("lead_data", {})
+            state.seo_intel = hunter_cached.get("seo_intel") or state.seo_intel
+            state.jina_insights = hunter_cached.get("jina_insights") or state.jina_insights
+            state.history.append(f"Checkpoint: Hunter reutilizado; pulando para Qualifying ({resumo})")
+            return _transition(state, STATE_QUALIFYING)
+
+        # Builder: se já tem HTML, avança direto para Quality Gate
         builder_cached = get_dados_agente(pipeline_id, "builder")
         if builder_cached and builder_cached.get("html"):
             state.build_output = builder_cached
-            state.history.append(f"Checkpoint: retomando em Quality Gate ({resumo_checkpoint(pipeline_id)})")
+            state.history.append(f"Checkpoint: Builder reutilizado; retomando em Quality Gate ({resumo})")
             return _transition(state, STATE_VALIDATING)
 
+        # Arquiteto: se já tem PRD, avança para Builder
         arquiteto_cached = get_dados_agente(pipeline_id, "arquiteto")
         prd_json = (arquiteto_cached or {}).get("prd_json")
         if prd_json and prd_json.get("business_name"):
             state.design_output = prd_json
-            state.history.append(f"Checkpoint: PRD reutilizado; retomando em Builder ({resumo_checkpoint(pipeline_id)})")
+            state.history.append(f"Checkpoint: PRD reutilizado; retomando em Builder ({resumo})")
             return _transition(state, STATE_BUILDING)
     except Exception as exc:
         logger.warning("[Checkpoint] retomada falhou lead_id=%s: %s", state.lead_id, exc)

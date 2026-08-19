@@ -27,11 +27,13 @@ def step_hunter(state: PipelineState) -> PipelineState:
     lead = state.lead_data
     if not lead:
         state.error = "lead_data vazio — Hunter não tem dados para processar"
+        _salvar_checkpoint_hunter(state, "erro")
         return _transition(state, STATE_FAILED)
 
     ok, msg = _validate_required_fields(lead, ["nome", "cidade", "telefone"])
     if not ok:
         state.error = f"Hunter: {msg}"
+        _salvar_checkpoint_hunter(state, "erro")
         return _transition(state, STATE_FAILED)
 
     lead.setdefault("id", state.lead_id)
@@ -122,4 +124,29 @@ def step_hunter(state: PipelineState) -> PipelineState:
         preserved=["fotos", "reviews", "reviews_list", "telefone", "endereco", "rating"],
         notes=["Hunter valida dados mínimos, adiciona Jina insights (slot isolado) e garante mídia editorial. lead_data é IMUTÁVEL downstream."],
     )
+    _salvar_checkpoint_hunter(state, "ok")
     return _transition(state, STATE_QUALIFYING)
+
+
+def _salvar_checkpoint_hunter(state: PipelineState, status: str) -> None:
+    """Salva estado do Hunter para retry sem perder progresso."""
+    if not state.tenant_id or not state.lead_id:
+        return
+    try:
+        pipeline_id = gerar_pipeline_id(
+            state.tenant_id,
+            state.lead_data.get("nome", "") if state.lead_data else "",
+            state.segmento,
+            state.cidade,
+            state.lead_id,
+        )
+        dados = {
+            "lead_data": state.lead_data or {},
+            "seo_intel": state.seo_intel or {},
+            "jina_insights": state.jina_insights or "",
+            "status": status,
+        }
+        salvar_checkpoint(pipeline_id, "hunter", dados)
+        logger.info("[Hunter] checkpoint salvo pipeline_id=%s status=%s", pipeline_id, status)
+    except Exception as exc:
+        logger.warning("[Hunter] checkpoint falhou (lead_id=%s): %s", state.lead_id, exc)
