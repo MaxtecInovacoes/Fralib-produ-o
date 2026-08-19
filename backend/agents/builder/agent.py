@@ -1195,7 +1195,7 @@ def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
                 last_error = f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
                 return "", ""
         except requests.exceptions.Timeout:
-            last_error = f"OpenUI HTTP {resp.status_code} attempt {attempt + 1}"
+            last_error = f"OpenUI timeout attempt {attempt + 1}/{max_retries} (60s)"
             if attempt < max_retries - 1:
                 time.sleep(retry_delays[attempt])
                 continue
