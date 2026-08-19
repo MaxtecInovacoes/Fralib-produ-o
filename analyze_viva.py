@@ -1,0 +1,25 @@
+"""Analyze Viva Academia published site to confirm lean builder."""
+import re
+p = "/var/www/fralib/sites/2/viva-academia-09f19869/index.html"
+with open(p, encoding="utf-8") as f:
+    html = f.read()
+print(f"Total: {len(html)} bytes")
+print(f"DOCTYPE: {'<!DOCTYPE' in html}")
+print(f"Sections: {len(re.findall(r'<section', html))}")
+sections = re.findall(r'<section[^>]+id="([^"]+)"', html)
+print(f"Section IDs: {sections}")
+print(f"Has details: {'<details' in html}")
+print(f"Has summary: {'<summary' in html}")
+print(f"Has AOS css: {'aos.css' in html}")
+print(f"Has AOS js: {'aos.js' in html}")
+print(f"Has data-aos: {len(re.findall(r'data-aos', html))}")
+print(f"Has planos: {'plano' in html.lower() or 'mensal' in html.lower()}")
+print(f"Has pricing (R$): {'R$' in html}")
+print(f"Has whatsapp: {'whatsapp' in html.lower() or 'wa.me' in html.lower()}")
+print(f"Has schema.org: {'schema.org' in html}")
+print(f"Has design tokens: {'design-tokens' in html}")
+print(f"Has lead name: {'Viva Academia' in html}")
+print(f"Has city: {'Curitiba' in html}")
+print(f"Has phone: {'55 41 99975' in html}")
+print(f"Has address: {'Anita Ribas' in html}")
+print(f"First 500 chars: {html[:500]!r}")

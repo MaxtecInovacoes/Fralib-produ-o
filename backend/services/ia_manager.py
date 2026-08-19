@@ -272,10 +272,19 @@ def parse_cooldown_from_response(status_code: int, headers: dict) -> int:
     return 15
 
 
-# ─── Rate Limit Protection System ───────────────────────────────────────────
+# ===== ENV HELPERS (shared with config.py) =====
+def _get_int(key: str, default: int) -> int:
+    try:
+        raw = os.getenv(key)
+        return int(raw) if raw and raw.strip().isdigit() else default
+    except (ValueError, TypeError):
+        return default
 
-DAILY_TOKEN_BUDGET = int(os.getenv("DAILY_TOKEN_BUDGET", "2000000"))  # 2M tokens/dia default
-GLOBAL_MAX_CALLS_PER_MIN = int(os.getenv("GLOBAL_MAX_CALLS_PER_MIN", "30"))
+
+# ===== Rate Limit Protection System =====
+
+DAILY_TOKEN_BUDGET = _get_int("DAILY_TOKEN_BUDGET", 2_000_000)  # 2M tokens/dia default
+GLOBAL_MAX_CALLS_PER_MIN = _get_int("GLOBAL_MAX_CALLS_PER_MIN", 30)
 
 TENANT_DAILY_LIMITS = {
     'trial': 100_000,

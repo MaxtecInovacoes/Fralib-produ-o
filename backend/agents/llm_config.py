@@ -73,8 +73,8 @@ AGENT_MODEL_MAP: dict[str, str] = {
     "franz": "sonnet",  # Era haiku — Sonnet mantém contexto SDR muito melhor
     "bryan": "sonnet",  # Era haiku — alias legacy, ainda usado em imports
     "validador": "haiku",
-    "agente_nicho": "haiku",
-    "agente_variacao": "haiku",
+    "agente_nicho": "sonnet",  # deployflow não disponibiliza haiku; sonnet é mínimo aceitável
+    "agente_variacao": "sonnet"  # v11 baseline: haiku indisponível,
     "curadoria": "opus",
     "arquiteto_mestre": "opus",
     "designer_prd": "opus",

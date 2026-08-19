@@ -40,9 +40,29 @@ IS_DEVELOPMENT = FRALIB_ENV == "dev"
 REDIS_URL = os.getenv("REDIS_URL")
 HAS_REDIS = REDIS_URL is not None and REDIS_URL.strip() != ""
 
+
+# ===== ENV HELPERS =====
+def get_int_env(key: str, default: int) -> int:
+    """Read an int env var safely — empty or non-numeric values fall back to default."""
+    try:
+        raw = os.getenv(key)
+        return int(raw) if raw and raw.strip().isdigit() else default
+    except (ValueError, TypeError):
+        return default
+
+
+def get_float_env(key: str, default: float) -> float:
+    """Read a float env var safely — empty or non-numeric values fall back to default."""
+    try:
+        raw = os.getenv(key)
+        return float(raw) if raw and raw.strip() else default
+    except (ValueError, TypeError):
+        return default
+
+
 # ===== RATE LIMITING =====
-GLOBAL_MAX_CALLS_PER_MIN = int(os.getenv("GLOBAL_MAX_CALLS_PER_MIN", "60"))
-GLOBAL_DAILY_TOKEN_BUDGET = int(os.getenv("GLOBAL_DAILY_TOKEN_BUDGET", "2000000"))
+GLOBAL_MAX_CALLS_PER_MIN = get_int_env("GLOBAL_MAX_CALLS_PER_MIN", 60)
+GLOBAL_DAILY_TOKEN_BUDGET = get_int_env("GLOBAL_DAILY_TOKEN_BUDGET", 2_000_000)
 
 # ===== FILE PATHS =====
 FRALIB_SITES_ROOT = os.getenv("FRALIB_SITES_ROOT", "/var/www/fralib/sites")

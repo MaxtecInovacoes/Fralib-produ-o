@@ -1,0 +1,15 @@
+import sys
+sys.path.insert(0, '/opt/fralib/backend')
+sys.path.insert(0, '/app/backend')
+from backend.db import get_conn
+conn = get_conn()
+cur = conn.cursor()
+cur.execute('SELECT id, status, agent, attempts FROM jobs WHERE id = 1106')
+row = cur.fetchone()
+print('BEFORE:', dict(row) if row else 'NOT_FOUND')
+cur.execute("""UPDATE jobs SET status='pending', attempts=0, next_retry_at=NOW(), last_error=NULL WHERE id=1106""")
+conn.commit()
+cur.execute('SELECT id, status, agent, attempts, payload FROM jobs WHERE id = 1106')
+row = cur.fetchone()
+print('AFTER:', dict(row) if row else 'NOT_FOUND')
+conn.close()

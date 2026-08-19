@@ -24,3 +24,5 @@ sentry-sdk[fastapi]==2.14.0
 loguru==0.7.3
 redis==5.0.8
 psutil==6.1.1
+
+langfuse>=2.0.0

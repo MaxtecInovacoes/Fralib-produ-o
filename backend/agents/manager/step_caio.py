@@ -1,4 +1,10 @@
-"""Step: Caio — Fase 2: Qualificação do lead via agente Caio."""
+"""Step: Caio — Fase 2: Qualificação do lead via agente Caio.
+
+Regra de estado (protocolo 2026-08-18):
+  - state.lead_data É IMUTÁVEL — Caio NÃO pode alterar/reatribuir.
+  - Saída vai EXCLUSIVAMENTE em state.caio_output.
+  - Se qualificar_lead() retornar dados, o dict é isolado em caio_output.
+"""
 import logging
 from backend.agents.manager.states import (
     PipelineState, STATE_QUALIFYING, STATE_NICHE_BRIEFING, STATE_FAILED,

@@ -13,6 +13,7 @@ from backend.agents.manager.states import (
     _transition, _validate_required_fields, _log_step_error,
     _record_agent_handoff,
 )
+from backend.agents.pipeline_checkpoint import salvar_checkpoint, gerar_pipeline_id
 from backend.core.knowledge_journal import record as journal_record
 
 logger = logging.getLogger("manager.pipeline")

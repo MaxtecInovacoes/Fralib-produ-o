@@ -1,0 +1,128 @@
+"""Step: Hunter — Fase 1: Mineração de leads do banco."""
+import logging
+from backend.agents.manager.states import (
+    PipelineState, STATE_HUNTING, STATE_QUALIFYING, STATE_FAILED,
+    _transition, _validate_required_fields, _log_step_error,
+    _record_agent_handoff,
+)
+from backend.core.knowledge_journal import record as journal_record
+
+logger = logging.getLogger("manager.pipeline")
+
+
+def step_hunter(state: PipelineState) -> PipelineState:
+    """Fase 1: Hunter valida dados do lead e pesquisa mercado (Jina best-effort)."""
+    if state.current_state != STATE_HUNTING:
+        return state
+
+    lead = state.lead_data
+    if not lead:
+        state.error = "lead_data vazio — Hunter não tem dados para processar"
+        return _transition(state, STATE_FAILED)
+
+    ok, msg = _validate_required_fields(lead, ["nome", "cidade", "telefone"])
+    if not ok:
+        state.error = f"Hunter: {msg}"
+        return _transition(state, STATE_FAILED)
+
+    lead.setdefault("id", state.lead_id)
+
+    # Pesquisa de mercado: Jina primária, Playwright fallback no módulo canônico.
+    try:
+        from backend.utils.jina_intelligence import (
+            buscar_inteligencia_jina,
+            formatar_inteligencia_para_arquiteto,
+        )
+        market_intel = buscar_inteligencia_jina(
+            nicho=state.segmento,
+            cidade=state.cidade,
+            nome_negocio=lead.get("nome", ""),
+        )
+        state.lead_data["jina_intelligence"] = market_intel
+        state.lead_data["jina_insights"] = formatar_inteligencia_para_arquiteto(market_intel)
+        logger.info(
+            "[Hunter] pesquisa OK provider=%s para %s (%s)",
+            market_intel.get("provider", "jina"), lead.get("nome"), state.cidade,
+        )
+    except Exception as e:
+        _log_step_error(state, "PesquisaMercado", e)
+        state.error = f"Pesquisa de mercado: {e}"
+        return _transition(state, STATE_FAILED)
+
+    try:
+        from backend.agents.unsplash_fetcher import buscar_fotos_unsplash
+
+        real_photos = lead.get("fotos") or lead.get("photos") or []
+        editorial_photos = buscar_fotos_unsplash(
+            segmento=state.segmento,
+            quantidade=max(0, 6 - len(real_photos)),
+            nome=lead.get("nome", ""),
+            cidade=state.cidade,
+        )
+        lead["fotos"] = list(dict.fromkeys([*real_photos, *editorial_photos]))[:8]
+        if len(lead["fotos"]) < 3:
+            raise RuntimeError("menos de 3 imagens disponíveis após fontes real e Unsplash")
+    except Exception as e:
+        _log_step_error(state, "Midia", e)
+        state.error = f"Mídia: {e}"
+        return _transition(state, STATE_FAILED)
+
+    # Knowledge Journal: market_analyzed
+    try:
+        journal_record(
+            project_id=state.lead_id,
+            event_type="market_analyzed",
+            hypothesis=f"Lead {lead.get('nome')} em {state.cidade} validado pelo Hunter",
+            payload={
+                "segmento": state.segmento,
+                "cidade": state.cidade,
+                "telefone": lead.get("telefone", ""),
+            },
+        )
+    except Exception as exc:
+        logger.warning("[Hunter] journal market_analyzed falhou (lead=%s): %s", state.lead_id, exc)
+
+    # F1 — canonical reviews_list + truthful reviews_count
+    raw_reviews = lead.get("reviews") or []
+    reviews_list = [
+        {
+            "author": r.get("autor", ""),
+            "rating": int(r.get("rating") or 0),
+            "text": r.get("texto", ""),
+            "time": r.get("data", ""),
+        }
+        for r in raw_reviews
+        if r.get("texto") or r.get("autor")
+    ]
+    lead_data["reviews_list"] = reviews_list
+    canonical_count = len(reviews_list)
+    if lead_data.get("reviews_count") != canonical_count:
+        logger.warning(
+            "[Hunter] reviews_count mismatch persisted=%s canonical=%s lead=%s",
+            lead_data.get("reviews_count"), canonical_count, state.lead_id,
+        )
+    lead_data["reviews_count"] = canonical_count
+
+    state.history.append(f"Hunter: lead validado — {lead.get('nome')} ({state.cidade})")
+    _record_agent_handoff(
+        state,
+        "hunter",
+        received={
+            "lead_id": state.lead_id,
+            "tenant_id": state.tenant_id,
+            "lead_fields": sorted(list((state.lead_data or {}).keys())),
+        },
+        produced={
+            "nome": lead.get("nome"),
+            "cidade": state.cidade,
+            "segmento": state.segmento,
+            "telefone": lead.get("telefone"),
+            "rating": lead.get("rating"),
+            "reviews_count": canonical_count,
+            "reviews_list": reviews_list[:3],
+            "photos_count": len(lead.get("fotos") or []),
+            "jina_provider": (lead.get("jina_intelligence") or {}).get("provider"),
+        },
+        notes=["Hunter valida dados mínimos, adiciona Jina insights, canonical reviews_list e garante mídia editorial."],
+    )
+    return _transition(state, STATE_QUALIFYING)

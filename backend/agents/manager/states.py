@@ -48,6 +48,8 @@ class PipelineState:
     visual_fingerprint: Optional[dict] = None
     design_output: Optional[dict] = None
     build_output: Optional[dict] = None
+    seo_intel: Optional[dict] = None  # Jina/Playwright intel — ISOLATED from lead_data
+    jina_insights: str = ""  # Formatted Jina text — ISOLATED slot (read-only downstream)
     quality_score: int = 0
     deploy_url: str = ""
     deploy_path: str = ""

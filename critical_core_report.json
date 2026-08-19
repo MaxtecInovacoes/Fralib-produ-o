@@ -47,9 +47,9 @@
     "backend/endpoints/whatsapp_endpoints.py"
   ],
   "missing_entrypoints": [],
-  "total_scanned_files": 442,
+  "total_scanned_files": 443,
   "active_core_files_count": 45,
-  "orphaned_files_count": 397,
+  "orphaned_files_count": 398,
   "active_files_by_layer": {
     "LAYER_1_CORE_DATABASE": [
       "backend/endpoints/auth_endpoints.py"
@@ -843,7 +843,7 @@
     },
     "backend/pipeline_ledger.py": {
       "layer": "LAYER_2_PIPELINE_ENGINE",
-      "size_bytes": 7645,
+      "size_bytes": 7701,
       "has_fastapi_router": false,
       "issues": [],
       "issue_count": 0,
@@ -927,7 +927,7 @@
     },
     "server.py": {
       "layer": "LAYER_UNCLASSIFIED",
-      "size_bytes": 16261,
+      "size_bytes": 16858,
       "has_fastapi_router": true,
       "issues": [
         {
@@ -1337,6 +1337,7 @@
     "tests/unit/test_pipeline_runtime_contracts.py",
     "tests/unit/test_utils.py",
     "tests/unit/test_visual_fingerprint_quality_gates.py",
-    "tests/unit/test_worker_payload_context.py"
+    "tests/unit/test_worker_payload_context.py",
+    "worker.py"
   ]
 }

@@ -93,7 +93,7 @@ def ler_skill(skill_name: str) -> str:
             except Exception as eb:
                 print(f"[Skills] WARN Erro ao ler bloco {bloco_path}: {eb}")
 
-        max_chars = int(os.getenv("FRALIB_SKILL_MAX_CHARS", "8000"))
+        max_chars = int(os.getenv("FRALIB_SKILL_MAX_CHARS") or "8000")
         content = content[:max_chars]
         print(f"[Skills] OK Skill {skill_name} carregada ({len(content)} chars, {len(blocos)} blocos extras)")
         return content
@@ -115,7 +115,7 @@ def carregar_skills(skills: List[str]) -> str:
     """
     guidelines_completo = ""
     skills_carregadas = []
-    max_total_chars = int(os.getenv("FRALIB_SKILLS_TOTAL_MAX_CHARS", "12000"))
+    max_total_chars = int(os.getenv("FRALIB_SKILLS_TOTAL_MAX_CHARS") or "12000")
 
     for skill in skills:
         guidelines = ler_skill(skill)

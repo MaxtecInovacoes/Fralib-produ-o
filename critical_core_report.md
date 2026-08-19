@@ -1,9 +1,9 @@
 # FraLib Critical Core Audit
 > Read-only. No files modified.
 
-- **Scanned**: 442 .py files
+- **Scanned**: 443 .py files
 - **Active**: 45
-- **Orphaned**: 397
+- **Orphaned**: 398
 - **Clean**: 13 · **Warning**: 32 · **Critical**: 0
 
 ## Discovered Entrypoints
@@ -316,7 +316,7 @@
 - `backend/agents/html_phase6_repair.py`
 - `backend/agents/html_publication_helpers.py`
 - `backend/agents/html_quality_gate.py`
-- … and 297 more (see JSON)
+- … and 298 more (see JSON)
 
 ---
 Generated: critical_core_report.json + critical_core_report.md

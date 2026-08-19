@@ -24,11 +24,11 @@ from typing import List, Dict, Optional
 GOSOM_BASE_URL = "http://localhost:8085"
 GOSOM_DATA_FOLDER = "/root/gmapsdata"
 GOSOM_ENABLED = os.getenv("GOSOM_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
-GOSOM_TIMEOUT = int(os.getenv("GOSOM_TIMEOUT", "45"))
-GOSOM_POLL_INTERVAL = int(os.getenv("GOSOM_POLL_INTERVAL", "3"))
-GOSOM_STALE_WORKING_SECS = int(os.getenv("GOSOM_STALE_WORKING_SECS", "120"))
-GOSOM_MAX_PENDING = int(os.getenv("GOSOM_MAX_PENDING", "3"))
-GOSOM_CIRCUIT_OPEN_SECS = int(os.getenv("GOSOM_CIRCUIT_OPEN_SECS", "900"))
+GOSOM_TIMEOUT = int(os.getenv("GOSOM_TIMEOUT") or "45")
+GOSOM_POLL_INTERVAL = int(os.getenv("GOSOM_POLL_INTERVAL") or "3")
+GOSOM_STALE_WORKING_SECS = int(os.getenv("GOSOM_STALE_WORKING_SECS") or "120")
+GOSOM_MAX_PENDING = int(os.getenv("GOSOM_MAX_PENDING") or "3")
+GOSOM_CIRCUIT_OPEN_SECS = int(os.getenv("GOSOM_CIRCUIT_OPEN_SECS") or "900")
 
 _CIRCUIT_OPEN_UNTIL = 0.0
 

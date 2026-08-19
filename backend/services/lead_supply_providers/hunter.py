@@ -38,7 +38,7 @@ async def run_hunter_job(db: Session, payload: dict[str, Any], tenant_id: int) -
         _event(db, tenant_id, "hunter", "info", "Estoque alvo já está completo")
         return {"ok": True, "captured": 0, "needed": 0}
 
-    batch_limit = max(1, min(int(os.getenv("LEAD_SUPPLY_HUNTER_BATCH", "8")), 20, needed))
+    batch_limit = max(1, min(int(os.getenv("LEAD_SUPPLY_HUNTER_BATCH") or "8"), 20, needed))
     captured = 0
     _event(db, tenant_id, "hunter", "info", f"Hunter buscando até {batch_limit} lead(s) para abastecer estoque")
 

@@ -71,8 +71,8 @@ def buscar_inteligencia_jina(
 ) -> dict:
     """Busca inteligência de mercado.
 
-    Prioridade: Playwright (rápido, sem custo) → Jina Reader API → Sites modelo.
-    Nunca falha: se tudo der errado, retorna fallback determinístico.
+    Ordem: Playwright (rápido, sem custo) → Jina Reader API.
+    Se ambos falharem, levanta RuntimeError com a causa — NÃO mascara com dados genéricos.
     """
 
     # Cache
@@ -103,9 +103,11 @@ def buscar_inteligencia_jina(
 
     # Prioridade 1: Playwright (rápido, sem custo de API, reaproveita browser do Hunter)
     resultado = None
+    erro_playwright = None
     try:
         resultado = _buscar_com_playwright(nicho, cidade, nome_negocio, concorrentes_urls)
     except Exception as e:
+        erro_playwright = e
         print(f"[Intel] Playwright falhou: {e}")
 
     # Prioridade 2: Jina Reader API (requer JINA_API_KEY)
@@ -114,14 +116,18 @@ def buscar_inteligencia_jina(
             resultado = _buscar_real(nicho, cidade, nome_negocio, concorrentes_urls)
         except Exception as e:
             print(f"[Intel] Jina API falhou: {e}")
+            raise RuntimeError(
+                f"Pesquisa de mercado indisponível. Playwright: {erro_playwright}. "
+                f"Jina API: {e}. Cole uma JINA_API_KEY válida no .env para destravar."
+            ) from e
 
-    # Prioridade 3: Sites modelo do nicho via Playwright (sempre funciona, sem API)
+    # NÃO HÁ FALLBACK FAKE. O erro é real e deve aparecer no step_hunter.
     if not resultado:
-        resultado = _buscar_sites_modelo(nicho, cidade, nome_negocio)
-
-    # Nunca falha — se tudo deu errado, usa análise determinística baseada no nicho
-    if not resultado:
-        resultado = _analisar_conteudo_deterministico("", nicho, cidade)
+        raise RuntimeError(
+            f"Pesquisa de mercado indisponível. Playwright: {erro_playwright}. "
+            f"Jina API: não configurada (JINA_API_KEY ausente). "
+            f"Instale Chromium (`playwright install chromium`) OU configure JINA_API_KEY."
+        ) from erro_playwright
 
     # Salvar cache
     try:

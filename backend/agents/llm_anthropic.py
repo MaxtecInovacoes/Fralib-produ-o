@@ -3,6 +3,8 @@ LLM Provider - Anthropic (Claude).
 
 Chamadas para API Anthropic usando SDK oficial.
 Suporta prompt caching, streaming, tools, e retry com key rotation.
+
+Observabilidade: toda chamada gera trace no Langfuse (se configurado).
 """
 
 import os
@@ -10,6 +12,7 @@ import time as _time
 import httpx
 import anthropic
 
+from backend.observability.langfuse_trace import get_tracer
 
 # Configurações do ambiente
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -40,17 +43,11 @@ class AnthropicTimeoutError(AnthropicProviderError):
     pass
 
 
-def _create_client(api_key: str, base_url: str) -> anthropic.Anthropic:
-    """Cria cliente Anthropic SDK com timeouts configurados."""
-    read_timeout = float(os.getenv("FRALIB_LLM_READ_TIMEOUT", "420"))
-    if base_url and base_url.endswith("/v1"):
-        base_url = base_url[:-3]
-    return anthropic.Anthropic(
-        api_key=api_key,
-        base_url=base_url,
-        max_retries=0,
-        timeout=httpx.Timeout(connect=10.0, read=read_timeout, write=60.0, pool=10.0),
-    )
+def _truncate(value, limit=2000):
+    """Trunca valor para trace do Langfuse."""
+    if isinstance(value, str) and len(value) > limit:
+        return value[:limit] + "...[truncado]"
+    return value
 
 
 def _extract_usage(response) -> dict:
@@ -64,12 +61,8 @@ def _extract_usage(response) -> dict:
     }
 
 
-def _build_system_payload(system: str) -> tuple[list, dict]:
-    """Constrói payload do system message com prompt caching.
-
-    Returns:
-        tuple: (system_payload, extra_headers)
-    """
+def _build_system_payload(system: str):
+    """Constrói payload do system message com prompt caching."""
     extra_headers = {}
     if system and len(system) >= 1024:
         system_payload = [
@@ -81,12 +74,8 @@ def _build_system_payload(system: str) -> tuple[list, dict]:
     return system_payload, extra_headers
 
 
-def _build_messages_content(rag_block: str, user: str) -> str | list:
-    """Constrói conteúdo das mensagens com cache para RAG.
-
-    Returns:
-        str ou list: conteúdo simples ou com blocos cacheados
-    """
+def _build_messages_content(rag_block: str, user: str):
+    """Constrói conteúdo das mensagens com cache para RAG."""
     if rag_block and len(rag_block) >= 1024:
         return [
             {"type": "text", "text": rag_block, "cache_control": {"type": "ephemeral"}},
@@ -110,7 +99,7 @@ class AnthropicProvider:
         return bool(self.api_key)
 
     @property
-    def client(self) -> anthropic.Anthropic:
+    def client(self):
         """Lazy-load do cliente SDK."""
         if self._client is None:
             self._client = _create_client(self.api_key, self.base_url)
@@ -127,32 +116,61 @@ class AnthropicProvider:
         extra_headers: dict = None,
         **kwargs
     ) -> tuple[str, dict]:
-        """Executa chamada LLM via SDK Anthropic.
+        """Executa chamada LLM via SDK Anthropic."""
+        tracer = get_tracer()
+        if tracer:
+            span = tracer.start_as_current_span(name="anthropic.call")
+            span.set_attribute("input", _truncate({
+                "model_id": model_id,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "system_len": len(system or ""),
+                "user_len": len(user or ""),
+            }))
+        else:
+            span = None
 
-        Returns:
-            tuple: (texto_resposta, usage_dict)
-        """
-        system_payload, headers = _build_system_payload(system)
-        if extra_headers:
-            headers.update(extra_headers)
+        try:
+            system_payload, headers = _build_system_payload(system)
+            if extra_headers:
+                headers.update(extra_headers)
 
-        messages_content = _build_messages_content(rag_block, user)
+            messages_content = _build_messages_content(rag_block, user)
 
-        response = self.client.messages.create(
-            model=model_id,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_payload,
-            messages=[{"role": "user", "content": messages_content}],
-            extra_headers=headers if headers else None,
-        )
+            response = self.client.messages.create(
+                model=model_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_payload,
+                messages=[{"role": "user", "content": messages_content}],
+                extra_headers=headers if headers else None,
+            )
 
-        # Extrair texto do response
-        for block in response.content:
-            if block.type == "text":
-                return block.text, _extract_usage(response)
+            for block in response.content:
+                if block.type == "text":
+                    usage = _extract_usage(response)
+                    if tracer:
+                        span.set_attribute("output", _truncate(block.text))
+                        span.set_attribute("status", "success")
+                        span.set_attribute("input_tokens", usage.get("input_tokens", 0))
+                        span.set_attribute("output_tokens", usage.get("output_tokens", 0))
+                        span.set_attribute("cache_read", usage.get("cache_read", 0))
+                        span.set_attribute("cache_created", usage.get("cache_created", 0))
+                    return block.text, usage
 
-        raise AnthropicProviderError("Nenhum bloco text na resposta")
+            raise AnthropicProviderError("Nenhum bloco text na resposta")
+
+        except Exception as e:
+            if tracer and span:
+                span.set_status("ERROR", str(e)[:500])
+                span.set_attribute("status", "error")
+            raise
+        finally:
+            if span:
+                try:
+                    span.end()
+                except Exception:
+                    pass
 
     def call_with_retry(
         self,
@@ -168,95 +186,135 @@ class AnthropicProvider:
         agent_name=None,
         **kwargs
     ) -> tuple[str, dict]:
-        """Executa chamada com retry automático e key rotation.
-
-        Args:
-            max_attempts: Número máximo de tentativas
-            key_id: ID da chave para tracking no ia_manager
-            ia_manager: Módulo ia_manager para key rotation
-
-        Returns:
-            tuple: (texto_resposta, usage_dict)
-        """
+        """Executa chamada com retry automático e key rotation."""
         from llm_direct import _resolve_anthropic
+
+        tracer = get_tracer()
+        if tracer:
+            span = tracer.start_as_current_span(name="anthropic.call_with_retry")
+            span.set_attribute("model_id", model_id)
+            span.set_attribute("max_attempts", max_attempts)
+            span.set_attribute("agent_name", agent_name or "")
+            span.set_attribute("input", _truncate({
+                "system_len": len(system or ""),
+                "user_len": len(user or ""),
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }))
+        else:
+            span = None
 
         api_key = self.api_key
         base_url = self.base_url
+        last_error = None
 
-        for attempt in range(1, max_attempts + 1):
-            client = _create_client(api_key, base_url)
-            system_payload, headers = _build_system_payload(system)
-            messages_content = _build_messages_content(rag_block, user)
+        try:
+            for attempt in range(1, max_attempts + 1):
+                client = _create_client(api_key, base_url)
+                system_payload, headers = _build_system_payload(system)
+                messages_content = _build_messages_content(rag_block, user)
 
-            try:
-                response = client.messages.create(
-                    model=model_id,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    system=system_payload,
-                    messages=[{"role": "user", "content": messages_content}],
-                    extra_headers=headers if headers else None,
-                )
-
-                # Mark success
-                if ia_manager and key_id:
-                    ia_manager.mark_success(key_id)
-
-                # Extrair texto
-                for block in response.content:
-                    if block.type == "text":
-                        return block.text, _extract_usage(response)
-
-                raise AnthropicProviderError("Nenhum bloco text na resposta")
-
-            except anthropic.RateLimitError as e:
-                cd = 60
-                if ia_manager:
-                    try:
-                        cd = ia_manager.parse_cooldown_from_response(
-                            429, dict(e.response.headers) if e.response else {}
-                        )
-                    except Exception:
-                        pass
-                if ia_manager and key_id:
-                    ia_manager.mark_failure(key_id, "429 rate limit", cd)
-
-                if attempt >= max_attempts:
-                    raise AnthropicRateLimitError(
-                        f"Rate limit persistente após {max_attempts} tentativas",
-                        reset_seconds=cd
+                try:
+                    response = client.messages.create(
+                        model=model_id,
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        system=system_payload,
+                        messages=[{"role": "user", "content": messages_content}],
+                        extra_headers=headers if headers else None,
                     )
 
-                # Key rotation
-                new_key = _resolve_anthropic(agent_name)
-                if new_key and new_key[2] != key_id:
-                    api_key, base_url, key_id = new_key
+                    if ia_manager and key_id:
+                        ia_manager.mark_success(key_id)
 
-                wait = min(10 * attempt, 20)
-                print(f"[Anthropic] 429 — aguardando {wait}s (tentativa {attempt}/{max_attempts})")
-                _time.sleep(wait)
+                    for block in response.content:
+                        if block.type == "text":
+                            usage = _extract_usage(response)
+                            if tracer and span:
+                                span.set_attribute("status", "success")
+                                span.set_attribute("attempt", attempt)
+                                span.set_attribute("output", _truncate(block.text))
+                                span.set_attribute("input_tokens", usage.get("input_tokens", 0))
+                                span.set_attribute("output_tokens", usage.get("output_tokens", 0))
+                            return block.text, usage
 
-            except anthropic.APIStatusError as e:
-                if e.status_code in (529, 503, 502):
-                    wait = min(20 * attempt, 60)
-                    print(f"[Anthropic] {e.status_code} Overloaded - aguardando {wait}s")
+                    raise AnthropicProviderError("Nenhum bloco text na resposta")
+
+                except anthropic.RateLimitError as e:
+                    cd = 60
+                    if ia_manager:
+                        try:
+                            cd = ia_manager.parse_cooldown_from_response(
+                                429, dict(e.response.headers) if e.response else {}
+                            )
+                        except Exception:
+                            pass
+                    if ia_manager and key_id:
+                        ia_manager.mark_failure(key_id, "429 rate limit", cd)
+
+                    if tracer and span:
+                        span.set_attribute("error_type", "rate_limit")
+                        span.set_attribute("attempt", attempt)
+
+                    if attempt >= max_attempts:
+                        raise AnthropicRateLimitError(
+                            f"Rate limit persistente após {max_attempts} tentativas",
+                            reset_seconds=cd
+                        )
+
+                    new_key = _resolve_anthropic(agent_name)
+                    if new_key and new_key[2] != key_id:
+                        api_key, base_url, key_id = new_key
+
+                    wait = min(10 * attempt, 20)
+                    print(f"[Anthropic] 429 — aguardando {wait}s (tentativa {attempt}/{max_attempts})")
                     _time.sleep(wait)
-                elif e.status_code == 400:
-                    if attempt < max_attempts:
-                        _time.sleep(5 * attempt)
+                    last_error = "rate_limit"
+
+                except anthropic.APIStatusError as e:
+                    if tracer and span:
+                        span.set_attribute("error_type", f"api_{e.status_code}")
+                        span.set_attribute("attempt", attempt)
+
+                    if e.status_code in (529, 503, 502):
+                        wait = min(20 * attempt, 60)
+                        print(f"[Anthropic] {e.status_code} Overloaded - aguardando {wait}s")
+                        _time.sleep(wait)
+                        last_error = f"overloaded_{e.status_code}"
+                    elif e.status_code == 400:
+                        if attempt < max_attempts:
+                            _time.sleep(5 * attempt)
+                        else:
+                            raise
                     else:
                         raise
-                else:
-                    raise
 
-            except (anthropic.APITimeoutError, anthropic.APIConnectionError):
-                if attempt >= max_attempts:
-                    raise AnthropicTimeoutError(f"Timeout após {max_attempts} tentativas")
-                wait = min(15 * attempt, 60)
-                print(f"[Anthropic] Timeout - aguardando {wait}s")
-                _time.sleep(wait)
+                except (anthropic.APITimeoutError, anthropic.APIConnectionError):
+                    if tracer and span:
+                        span.set_attribute("error_type", "timeout")
+                        span.set_attribute("attempt", attempt)
 
-        raise AnthropicProviderError(f"Falhou após {max_attempts} tentativas")
+                    if attempt >= max_attempts:
+                        raise AnthropicTimeoutError(f"Timeout após {max_attempts} tentativas")
+                    wait = min(15 * attempt, 60)
+                    print(f"[Anthropic] Timeout - aguardando {wait}s")
+                    _time.sleep(wait)
+                    last_error = "timeout"
+
+            raise AnthropicProviderError(f"Falhou após {max_attempts} tentativas")
+
+        except Exception as e:
+            if tracer and span:
+                span.set_status("ERROR", str(e)[:500])
+                span.set_attribute("status", "error")
+                span.set_attribute("last_error", last_error or type(e).__name__)
+            raise
+        finally:
+            if span:
+                try:
+                    span.end()
+                except Exception:
+                    pass
 
     def call_structured(
         self,
@@ -270,46 +328,73 @@ class AnthropicProvider:
         max_tokens: int = 8000,
         **kwargs
     ) -> dict:
-        """Chama Claude com tool_use para forçar retorno JSON estruturado.
+        """Chama Claude com tool_use para forçar retorno JSON estruturado."""
+        tracer = get_tracer()
+        if tracer:
+            span = tracer.start_as_current_span(name="anthropic.call_structured")
+            span.set_attribute("model_id", model_id)
+            span.set_attribute("tool_name", tool_name)
+            span.set_attribute("input", _truncate({
+                "system_len": len(system or ""),
+                "user_len": len(user or ""),
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }))
+        else:
+            span = None
 
-        Returns:
-            dict: Input do tool_use block
-        """
-        system_payload, headers = _build_system_payload(system)
-        headers["anthropic-beta"] = "prompt-caching-2024-07-31"
+        try:
+            system_payload, headers = _build_system_payload(system)
+            headers["anthropic-beta"] = "prompt-caching-2024-07-31"
 
-        client = _create_client(self.api_key, self.base_url)
+            client = _create_client(self.api_key, self.base_url)
 
-        response = client.messages.create(
-            model=model_id,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_payload,
-            messages=[{"role": "user", "content": user}],
-            tools=[
-                {
-                    "name": tool_name,
-                    "description": tool_description,
-                    "input_schema": input_schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": tool_name},
-            extra_headers=headers if headers else None,
-        )
+            response = client.messages.create(
+                model=model_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_payload,
+                messages=[{"role": "user", "content": user}],
+                tools=[
+                    {
+                        "name": tool_name,
+                        "description": tool_description,
+                        "input_schema": input_schema,
+                    }
+                ],
+                tool_choice={"type": "tool", "name": tool_name},
+                extra_headers=headers if headers else None,
+            )
 
-        # Extrair tool_use
-        for block in response.content:
-            if block.type == "tool_use" and block.name == tool_name:
-                return block.input
+            for block in response.content:
+                if block.type == "tool_use" and block.name == tool_name:
+                    if tracer and span:
+                        span.set_attribute("status", "success")
+                        span.set_attribute("output", _truncate(block.input))
+                    return block.input
 
-        # Fallback: qualquer tool_use
-        for block in response.content:
-            if block.type == "tool_use":
-                return block.input
+            for block in response.content:
+                if block.type == "tool_use":
+                    if tracer and span:
+                        span.set_attribute("status", "success_fallback")
+                        span.set_attribute("output", _truncate(block.input))
+                    return block.input
 
-        raise AnthropicProviderError(
-            f"Nenhum tool_use block na resposta (stop={response.stop_reason})"
-        )
+            raise AnthropicProviderError(
+                f"Nenhum tool_use block na resposta (stop={response.stop_reason})"
+            )
+
+        except Exception as e:
+            if tracer and span:
+                span.set_status("ERROR", str(e)[:500])
+                span.set_attribute("status", "error")
+            raise
+        finally:
+            if span:
+                try:
+                    span.end()
+                except Exception:
+                    pass
 
     def stream(
         self,
@@ -321,34 +406,58 @@ class AnthropicProvider:
         on_chunk: callable = None,
         **kwargs
     ) -> tuple[str, dict]:
-        """Streaming com callback por chunk.
+        """Streaming com callback por chunk."""
+        tracer = get_tracer()
+        if tracer:
+            span = tracer.start_as_current_span(name="anthropic.stream")
+            span.set_attribute("model_id", model_id)
+            span.set_attribute("max_tokens", max_tokens)
+            span.set_attribute("input", _truncate({
+                "system_len": len(system or ""),
+                "user_len": len(user or ""),
+            }))
+        else:
+            span = None
 
-        Args:
-            on_chunk: Callback chamado para cada chunk de texto
+        try:
+            system_payload, headers = _build_system_payload(system)
+            client = _create_client(self.api_key, self.base_url)
 
-        Returns:
-            tuple: (texto_completo, usage_dict)
-        """
-        system_payload, headers = _build_system_payload(system)
-        client = _create_client(self.api_key, self.base_url)
+            full_text = ""
+            with client.messages.stream(
+                model=model_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                system=system_payload,
+                messages=[{"role": "user", "content": user}],
+                extra_headers=headers if headers else None,
+            ) as stream:
+                for text in stream.text_stream:
+                    full_text += text
+                    if on_chunk:
+                        on_chunk(text)
 
-        full_text = ""
-        with client.messages.stream(
-            model=model_id,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_payload,
-            messages=[{"role": "user", "content": user}],
-            extra_headers=headers if headers else None,
-        ) as stream:
-            for text in stream.text_stream:
-                full_text += text
-                if on_chunk:
-                    on_chunk(text)
+            response = stream.get_final_message()
+            usage = _extract_usage(response)
+            if tracer and span:
+                span.set_attribute("status", "success")
+                span.set_attribute("output", _truncate(full_text))
+                span.set_attribute("output_len", len(full_text))
+                span.set_attribute("input_tokens", usage.get("input_tokens", 0))
+                span.set_attribute("output_tokens", usage.get("output_tokens", 0))
+            return full_text, usage
 
-        # Obter usage do stream completo
-        response = stream.get_final_message()
-        return full_text, _extract_usage(response)
+        except Exception as e:
+            if tracer and span:
+                span.set_status("ERROR", str(e)[:500])
+                span.set_attribute("status", "error")
+            raise
+        finally:
+            if span:
+                try:
+                    span.end()
+                except Exception:
+                    pass
 
 
 # Instância singleton

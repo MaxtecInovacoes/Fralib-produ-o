@@ -1,0 +1,1347 @@
+"""
+Builder Agent — OpenUI HTTP Client.
+
+Receives a DesignerPRD and calls the OpenUI service (port 7878 - wandb/openui)
+to generate the complete HTML site via single-shot LLM generation.
+"""
+import os
+import time
+import re
+import requests
+from urllib.parse import quote_plus
+from backend.agents.design_guidelines import TAILWIND_FIRST_RULES, ANIMATION_PRINCIPLES
+
+try:
+    from loguru import logger as _builder_logger
+except ImportError:
+    _builder_logger = None
+
+try:
+    from backend.agents.artifact_store import write_html_artifact, write_json_artifact
+except Exception:
+    write_html_artifact = None
+    write_json_artifact = None
+
+# ═══════════════════════════════════════════════════════════════════
+# ARCHETYPE DESIGN SYSTEMS — concrete tokens per visual archetype
+# Each entry drives typography, radius, spacing, card style and
+# palette bias so OpenUI renders a genuinely different layout per
+# business instead of relying on a vague text briefing.
+# ═══════════════════════════════════════════════════════════════════
+
+ARCHETYPE_DESIGN_SYSTEMS = {
+    "industrial-bold": {
+        "heading_font": "Bebas Neue",
+        "body_font": "Space Grotesk",
+        "border_radius": "0px",
+        "heading_align": "left",
+        "card_style": "sharp-border",
+        "spacing_tight": True,
+        "palette_bias": {"bg": "#0a0a0a", "surface": "#1a1a1a", "accent": "#ff3b00"},
+    },
+    "editorial-asymmetric": {
+        "heading_font": "Playfair Display",
+        "body_font": "Inter",
+        "border_radius": "8px",
+        "heading_align": "left",
+        "card_style": "shadow-elevated",
+        "spacing_tight": False,
+        "palette_bias": {"bg": "#fafafa", "surface": "#ffffff", "accent": "#1a1a1a"},
+    },
+    "apple-minimalist": {
+        "heading_font": "SF Pro Display",
+        "body_font": "SF Pro Text",
+        "border_radius": "16px",
+        "heading_align": "center",
+        "card_style": "glass-subtle",
+        "spacing_tight": False,
+        "palette_bias": {"bg": "#fbfbfd", "surface": "#ffffff", "accent": "#0071e3"},
+    },
+    "dark-futurist": {
+        "heading_font": "Orbitron",
+        "body_font": "Exo 2",
+        "border_radius": "12px",
+        "heading_align": "center",
+        "card_style": "glass-neon",
+        "spacing_tight": True,
+        "palette_bias": {"bg": "#0a0a14", "surface": "#12122a", "accent": "#00f0ff"},
+    },
+    "organic-warm": {
+        "heading_font": "DM Serif Display",
+        "body_font": "DM Sans",
+        "border_radius": "24px",
+        "heading_align": "left",
+        "card_style": "soft-shadow",
+        "spacing_tight": False,
+        "palette_bias": {"bg": "#fdf8f3", "surface": "#fff9f0", "accent": "#8b5e3c"},
+    },
+    "corporate-trust": {
+        "heading_font": "Source Serif 4",
+        "body_font": "Source Sans 3",
+        "border_radius": "4px",
+        "heading_align": "left",
+        "card_style": "bordered",
+        "spacing_tight": True,
+        "palette_bias": {"bg": "#ffffff", "surface": "#f5f7fa", "accent": "#1a56db"},
+    },
+}
+
+
+def _get_archetype_design_system(archetype: str) -> dict:
+    """Return concrete design-system tokens for an archetype.
+
+    Falls back to editorial-asymmetric when archetype is unknown.
+    The returned dict is flattened into design_tokens and design_system
+    so OpenUI receives specific CSS/typography instructions, not a vague
+    text briefing.
+    """
+    return ARCHETYPE_DESIGN_SYSTEMS.get(
+        archetype, ARCHETYPE_DESIGN_SYSTEMS["editorial-asymmetric"]
+    )
+
+
+OPENUI_URL = os.environ.get("OPENUI_URL") or os.environ.get("OPENUI_SERVICE_URL", "http://localhost:7878")
+GENERATE_ENDPOINT = f"{OPENUI_URL}/generate"
+OPENUI_CHECK_URL = f"{OPENUI_URL}/generate"
+
+_SECTION_BLOCKS = [
+    ["hero"],
+    ["interesse"],
+    ["sobre"],
+    ["servicos"],
+    ["desejo"],
+    ["depoimentos"],
+    ["seo-geo"],
+    ["faq"],
+    ["localizacao"],
+    ["acao"],
+    ["contato"],
+    ["footer"],
+]
+
+class BuildResult:
+    """Result of a site build."""
+    def __init__(self, html: str, model: str = "", success: bool = True, error: str = ""):
+        self.html = html
+        self.model = model
+        self.success = success
+        self.error = error
+
+
+_VISIBLE_TAG_RE = re.compile(
+    r"<(?:main|section|header|nav|article|aside|footer|div|h1|h2|h3|p|a|button|form|img|ul|ol|li)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _strip_non_content_blocks(html: str) -> str:
+    html = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html or "")
+    html = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", html)
+    html = re.sub(r"(?is)<noscript\b[^>]*>.*?</noscript>", " ", html)
+    return html
+
+
+def _looks_like_valid_body_fragment(html: str) -> tuple[bool, str]:
+    """Reject style/script-heavy fragments before they poison the final page."""
+    if not html or len(html.strip()) < 200:
+        return False, "fragmento muito curto"
+
+    style_opens = len(re.findall(r"(?i)<style\b", html))
+    style_closes = len(re.findall(r"(?i)</style>", html))
+    if style_opens != style_closes:
+        return False, "tags <style> desbalanceadas"
+
+    script_opens = len(re.findall(r"(?i)<script\b", html))
+    script_closes = len(re.findall(r"(?i)</script>", html))
+    if script_opens != script_closes:
+        return False, "tags <script> desbalanceadas"
+
+    content_only = _strip_non_content_blocks(html)
+    visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", content_only)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    lower = content_only.lower()
+    main_count = lower.count("<main")
+    section_count = lower.count("<section")
+    h1_count = lower.count("<h1")
+
+    if visible_tags == 0:
+        return False, "sem tags estruturais visiveis"
+    if len(visible_text) < 80:
+        return False, "texto visivel insuficiente"
+    if main_count == 0:
+        return False, "sem tag <main>"
+    if section_count < 3:
+        return False, f"poucas secoes ({section_count})"
+    if h1_count == 0:
+        return False, "sem tag <h1>"
+    if "<script" in lower or "<style" in lower:
+        return False, "bloco ainda contem style/script apos limpeza"
+
+    return True, ""
+
+
+def _looks_like_valid_section_fragment(html: str) -> tuple[bool, str]:
+    """Aceita fragmentos de seção e também documentos completos com corpo útil."""
+    if not html or len(html.strip()) < 120:
+        return False, "fragmento de secao muito curto"
+
+    body_only = _extract_body_only(html)
+    if not body_only or len(body_only.strip()) < 120:
+        return False, "corpo do fragmento muito curto"
+
+    style_opens = len(re.findall(r"(?i)<style\b", body_only))
+    style_closes = len(re.findall(r"(?i)</style>", body_only))
+    if style_opens != style_closes:
+        return False, "tags <style> desbalanceadas"
+
+    script_opens = len(re.findall(r"(?i)<script\b", body_only))
+    script_closes = len(re.findall(r"(?i)</script>", body_only))
+    if script_opens != script_closes:
+        return False, "tags <script> desbalanceadas"
+
+    if _has_unbalanced_tags(body_only):
+        return False, "tags <div> desbalanceadas no fragmento"
+
+    content_only = _strip_non_content_blocks(body_only)
+    visible_tags = len(_VISIBLE_TAG_RE.findall(content_only))
+    visible_text = re.sub(r"(?is)<[^>]+>", " ", content_only)
+    visible_text = re.sub(r"\s+", " ", visible_text).strip()
+    lower = content_only.lower()
+    section_count = lower.count("<section")
+    main_count = lower.count("<main")
+    header_count = lower.count("<header")
+    article_count = lower.count("<article")
+    div_count = lower.count("<div")
+    h1_count = lower.count("<h1")
+
+    if visible_tags == 0:
+        return False, "sem tags estruturais visiveis"
+    if len(visible_text) < 60:
+        return False, "texto visivel insuficiente"
+    if section_count == 0 and main_count == 0 and header_count == 0 and article_count == 0 and div_count == 0:
+        return False, "sem bloco estrutural renderizavel"
+    if h1_count == 0 and section_count == 0 and main_count == 0:
+        return False, "fragmento sem heading principal"
+    if "<script" in lower or "<style" in lower:
+        return False, "fragmento ainda contem style/script apos limpeza"
+
+    return True, ""
+
+
+def _has_unbalanced_tags(html: str) -> bool:
+    """Detecta tags HTML abertas e não fechadas em um fragmento."""
+    if not html:
+        return False
+    stripped = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html)
+    stripped = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", stripped)
+    block_tags = re.findall(r"<(/?)(section|div|span|p|ul|ol|li|header|footer|nav|article|aside|form|table|tr|td|figure|blockquote)\b", stripped, flags=re.IGNORECASE)
+    depth = 0
+    for slash, tag in block_tags:
+        if not slash:
+            depth += 1
+        else:
+            depth -= 1
+        if depth < 0:
+            return True
+    return depth != 0
+
+
+def _sanitize_fragment(html: str) -> str:
+    """Fecha tags desbalanceadas no final do fragmento para evitar vazamento de grid."""
+    if not html or not _has_unbalanced_tags(html):
+        return html
+    stack = []
+    close_map = {}
+    for tag in ("section", "div", "span", "p", "ul", "ol", "li", "header", "footer", "nav", "article", "aside", "form", "table", "tr", "td", "figure", "blockquote"):
+        close_map[tag] = tag
+    open_re = re.compile(r"<(?P<tag>[a-z]+)[^>]*>", flags=re.IGNORECASE)
+    close_re = re.compile(r"</(?P<tag>[a-z]+)\s*>", flags=re.IGNORECASE)
+    void_re = re.compile(r"<(?:br|hr|img|input|meta|link)[^>]*>", flags=re.IGNORECASE)
+    pos = 0
+    for m in open_re.finditer(html):
+        tag = m.group("tag").lower()
+        if tag in ("br", "hr", "img", "input", "meta", "link"):
+            continue
+        before = html[pos:m.start()]
+        if close_re.search(before) or void_re.search(before):
+            continue
+        stack.append(tag)
+        pos = m.end()
+    closing = "".join(f"</{close_map[t]}>" for t in reversed(stack))
+    return html + closing
+
+
+def _first_non_empty(*values):
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _artifact_slug(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-") or "section"
+
+
+def _normalize_media_plan_items(media_plan) -> list[dict]:
+    normalized = []
+    for item in media_plan or []:
+        if not isinstance(item, dict):
+            continue
+        normalized.append(item)
+    return normalized
+
+
+def _section_minimum_requirements(section_name: str, has_reviews: bool, has_faq: bool, has_media: bool) -> dict:
+    base = {
+        "must_have": ["semantic section wrapper", "visible heading", "clear CTA or next step"],
+        "must_not": ["placeholder copy", "fake contact data", "invented testimonials"],
+        "minimum_content_blocks": 2,
+    }
+    rules = {
+        "hero": {
+            "must_have": ["h1", "supporting paragraph", "primary CTA", "local context"],
+            "minimum_content_blocks": 4,
+        },
+        "sobre": {
+            "must_have": ["section heading", "business context", "trust signals"],
+            "minimum_content_blocks": 3,
+        },
+        "servicos": {
+            "must_have": ["service grouping", "practical benefit copy", "CTA"],
+            "minimum_content_blocks": 3,
+        },
+        "depoimentos": {
+            "must_have": ["section heading", "real reviews" if has_reviews else "factual commitments", "trust framing"],
+            "minimum_content_blocks": 3,
+        },
+        "seo-geo": {
+            "must_have": ["local keyword coverage", "city/neighborhood mentions", "service intent copy"],
+            "minimum_content_blocks": 3,
+        },
+        "faq": {
+            "must_have": ["section heading", "accordion or list", "at least 3 questions" if has_faq else "fallback local questions"],
+            "minimum_content_blocks": 3,
+        },
+        "localizacao": {
+            "must_have": ["address context", "city mention", "contact path"],
+            "minimum_content_blocks": 3,
+        },
+        "acao": {
+            "must_have": ["strong CTA", "urgency or motivation", "contact action"],
+            "minimum_content_blocks": 3,
+        },
+        "contato": {
+            "must_have": ["exact phone", "contact CTA", "service area or address"],
+            "minimum_content_blocks": 3,
+        },
+        "footer": {
+            "must_have": ["brand close", "exact contact data", "city or address", "legal/support links"],
+            "minimum_content_blocks": 3,
+        },
+    }
+    merged = dict(base)
+    merged.update(rules.get(section_name, {}))
+    if has_media and section_name in {"hero", "sobre", "servicos", "localizacao"}:
+        merged["must_have"] = list(dict.fromkeys([*merged["must_have"], "real image usage when media is available"]))
+    return merged
+
+
+def _build_section_contracts(
+    sections: list[dict],
+    variation_blueprint: dict,
+    media_plan: list[dict],
+    reviews_list: list,
+    faqs: list,
+) -> list[dict]:
+    order = variation_blueprint.get("ordem_das_secoes") or []
+    order_map = {
+        str(name).strip().lower(): index + 1
+        for index, name in enumerate(order)
+        if str(name).strip()
+    }
+    normalized_media = _normalize_media_plan_items(media_plan)
+    contracts: list[dict] = []
+    for fallback_index, section in enumerate(sections, start=1):
+        name = str(section.get("name") or "").strip().lower() or f"section-{fallback_index}"
+        section_media = [
+            item for item in normalized_media
+            if str(item.get("section") or "").strip().lower() == name
+        ]
+        required_media = [item for item in section_media if item.get("required") is True]
+        contracts.append(
+            {
+                "name": name,
+                "order_index": order_map.get(name, fallback_index),
+                "aida_role": {
+                    "hero": "attention",
+                    "interesse": "interest",
+                    "desejo": "desire",
+                    "acao": "action",
+                }.get(name, "supporting"),
+                "media_plan": section_media,
+                "required_media_count": len(required_media),
+                "minimum_requirements": _section_minimum_requirements(
+                    name,
+                    has_reviews=bool(reviews_list),
+                    has_faq=bool(faqs),
+                    has_media=bool(section_media),
+                ),
+            }
+        )
+    return contracts
+
+
+def _write_builder_spec_artifacts(spec: dict) -> None:
+    if not write_json_artifact:
+        return
+    run_id = str(spec.get("_run_id") or "no-run")
+    lead_id = str(spec.get("_lead_id") or "no-lead")
+    lead_name = str(spec.get("_lead_name") or "")
+    write_json_artifact(
+        run_id=run_id,
+        lead_id=lead_id,
+        lead_name=lead_name,
+        filename="builder/openui_payload/00-openui-payload.json",
+        payload=spec,
+        metadata={"step": "builder", "artifact_type": "openui_payload"},
+    )
+    for index, section in enumerate(spec.get("sections", []), start=1):
+        if not isinstance(section, dict):
+            continue
+        name = _artifact_slug(section.get("name", f"section-{index}"))
+        write_json_artifact(
+            run_id=run_id,
+            lead_id=lead_id,
+            lead_name=lead_name,
+            filename=f"builder/section_specs/{index:02d}-{name}.json",
+            payload=section,
+            metadata={
+                "step": "builder",
+                "artifact_type": "section_spec",
+                "section_name": section.get("name", ""),
+                "section_index": index,
+            },
+        )
+
+
+def _coerce_section_content(section) -> str:
+    if not section:
+        return ""
+    copy_data = getattr(section, "copy_data", None) or {}
+    if not isinstance(copy_data, dict):
+        copy_data = {}
+
+    pieces: list[str] = []
+    title = _first_non_empty(
+        getattr(section, "title", None),
+        getattr(section, "h1", None),
+        getattr(section, "h2", None),
+        getattr(section, "headline", None),
+        copy_data.get("h1"),
+        copy_data.get("h2"),
+        copy_data.get("headline"),
+        copy_data.get("title"),
+    )
+    if title:
+        pieces.append(title)
+
+    subtitle = _first_non_empty(
+        getattr(section, "subheadline", None),
+        copy_data.get("subtitle"),
+        copy_data.get("subheadline"),
+        copy_data.get("eyebrow"),
+    )
+    if subtitle:
+        pieces.append(subtitle)
+
+    body = _first_non_empty(
+        getattr(section, "content", None),
+        copy_data.get("body"),
+        copy_data.get("description"),
+        copy_data.get("text"),
+    )
+    if body:
+        pieces.append(body)
+
+    items = copy_data.get("items")
+    if isinstance(items, list) and items:
+        pieces.extend(str(item).strip() for item in items if str(item).strip())
+
+    for key in ("cta_primary", "cta_secondary", "cta", "cta_text"):
+        value = copy_data.get(key)
+        if isinstance(value, str) and value.strip():
+            pieces.append(value.strip())
+
+    return "\n".join(piece for piece in pieces if piece)
+
+
+def _wait_for_openui(max_wait: int = 30) -> bool:
+    """Wait for OpenUI service to be ready.
+
+    OpenUI wandb doesn't have a health endpoint that returns 200.
+    Instead, we try a POST to /generate - if it returns any non-5xx response,
+    the service is available (422 means endpoint exists, just missing body).
+    """
+    for _ in range(max_wait):
+        try:
+            # POST with empty body - 422 means "service is up, but missing input"
+            # 200 would mean health check passed
+            # Any non-5xx means service is reachable
+            r = requests.post(OPENUI_CHECK_URL, json={"prompt": "test"}, timeout=2)
+            if r.status_code < 500:
+                return True
+        except Exception as e:
+            if _builder_logger:
+                _builder_logger.warning("[builder] OpenUI check tentativa {} falhou: {}", _ + 1, e)
+        time.sleep(1)
+    return False
+
+
+def _prd_to_spec(prd) -> dict:
+    """Convert DesignerPRD to JSON spec for OpenUI service."""
+    creative_direction = getattr(prd, "creative_direction", {}) or {}
+    variation_blueprint = getattr(prd, "variation_blueprint", {}) or {}
+    media_plan = getattr(prd, "media_plan", []) or []
+    reviews_list = getattr(prd, "reviews_list", []) or []
+    faqs = getattr(prd, "faq_questions", []) or []
+    sections = []
+    for s in prd.sections:
+        section_payload = {
+            "name": getattr(s, "name", "") or getattr(s, "id", ""),
+            "title": _first_non_empty(
+                getattr(s, "title", None),
+                getattr(s, "h1", None),
+                getattr(s, "h2", None),
+                getattr(s, "headline", None),
+                (getattr(s, "copy_data", None) or {}).get("h1") if isinstance(getattr(s, "copy_data", None), dict) else None,
+                (getattr(s, "copy_data", None) or {}).get("h2") if isinstance(getattr(s, "copy_data", None), dict) else None,
+            ) or (getattr(s, "name", "") or "section"),
+            "content": _coerce_section_content(s),
+            "layout_type": getattr(s, "layout_type", None),
+            "components": getattr(s, "components", None) or [],
+            "copy_data": getattr(s, "copy_data", None) or {},
+            "items": getattr(s, "items", None) or [],
+            "cta": getattr(s, "cta", None),
+            "objective": getattr(s, "objective", None),
+            "media_role": getattr(s, "media_role", None),
+            "schema_org": getattr(s, "schema_org", None),
+        }
+        sections.append(section_payload)
+    section_contracts = _build_section_contracts(
+        sections,
+        variation_blueprint=variation_blueprint,
+        media_plan=media_plan,
+        reviews_list=reviews_list,
+        faqs=faqs,
+    )
+    contracts_by_name = {contract["name"]: contract for contract in section_contracts}
+    hard_constraints = (
+        creative_direction.get("hard_constraints", {})
+        if isinstance(creative_direction, dict)
+        else {}
+    )
+    soft_constraints = (
+        creative_direction.get("soft_constraints", {})
+        if isinstance(creative_direction, dict)
+        else {}
+    )
+    for section_payload in sections:
+        section_name = str(section_payload.get("name") or "").strip().lower()
+        section_contract = contracts_by_name.get(section_name, {})
+        section_payload["section_contract"] = section_contract
+        section_payload["order_index"] = section_contract.get("order_index")
+        section_payload["media_plan"] = section_contract.get("media_plan", [])
+        section_payload["required_media_count"] = section_contract.get("required_media_count", 0)
+        section_payload["hard_constraints"] = hard_constraints
+        section_payload["soft_constraints"] = soft_constraints
+
+    color_palette = {}
+    if hasattr(prd, "color_palette") and prd.color_palette:
+        cp = prd.color_palette
+        if hasattr(cp, "model_dump"):
+            color_palette = cp.model_dump()
+        elif hasattr(cp, "dict"):
+            color_palette = cp.dict()
+        else:
+            color_palette = {k: v for k, v in vars(cp).items() if not k.startswith("_")}
+
+    animations = []
+    if hasattr(prd, "animations") and prd.animations:
+        for anim in prd.animations:
+            if hasattr(anim, "model_dump"):
+                animations.append(anim.model_dump())
+            elif hasattr(anim, "dict"):
+                animations.append(anim.dict())
+            else:
+                animations.append({k: v for k, v in vars(anim).items() if not k.startswith("_")})
+
+    # Build design_tokens from available PRD fields
+    archetype_slug = getattr(prd, "design_system_slug", None) or "editorial-asymmetric"
+    archetype_system = _get_archetype_design_system(archetype_slug)
+    design_tokens = {
+        "archetype": archetype_slug,
+        "palette": color_palette,
+        "typography": getattr(prd, "typography", {}),
+        "radius": archetype_system.get("border_radius", "8px"),
+        "heading_font": archetype_system.get("heading_font"),
+        "body_font": archetype_system.get("body_font"),
+        "heading_align": archetype_system.get("heading_align"),
+        "card_style": archetype_system.get("card_style"),
+        "spacing_tight": archetype_system.get("spacing_tight"),
+        "palette_bias": archetype_system.get("palette_bias", {}),
+    }
+
+    # Build layout_dna from layout_type
+    layout_type = getattr(prd, "layout_type", None) or "asymmetric-magazine"
+    layout_dna = {
+        "layout_family": layout_type,
+        "section_count_range": [7, 12],
+    }
+
+    # Build design_system from archetype
+    design_system = {
+        "archetype": archetype_slug,
+        **{k: v for k, v in archetype_system.items() if k != "palette_bias"},
+        "palette_bias": archetype_system.get("palette_bias", {}),
+    }
+
+    # Build hero from first section
+    hero = {}
+    if sections:
+        hero_section = sections[0]
+        hero_copy = hero_section.get("copy_data") if isinstance(hero_section.get("copy_data"), dict) else {}
+        hero = {
+            "headline": _first_non_empty(
+                prd.business_name,
+                hero_copy.get("h1") if isinstance(hero_copy, dict) else "",
+                hero_section.get("title"),
+            ),
+            "subheadline": _first_non_empty(
+                hero_copy.get("subtitle") if isinstance(hero_copy, dict) else "",
+                hero_copy.get("body") if isinstance(hero_copy, dict) else "",
+                getattr(prd, "value_props", [""])[0] if getattr(prd, "value_props", []) else "",
+            ),
+            "cta_text": _first_non_empty(
+                hero_copy.get("cta_primary") if isinstance(hero_copy, dict) else "",
+                hero_copy.get("cta") if isinstance(hero_copy, dict) else "",
+                "Fale Conosco",
+            ),
+        }
+
+    # Build ctas from value_props
+    ctas = []
+    for section in sections:
+        copy_data = section.get("copy_data") if isinstance(section.get("copy_data"), dict) else {}
+        for key in ("cta_primary", "cta_secondary"):
+            value = copy_data.get(key)
+            if isinstance(value, str) and value.strip():
+                ctas.append({"text": value.strip()[:60], "href": "#contato"})
+    if not ctas:
+        for vp in (getattr(prd, "value_props", []) or [])[:3]:
+            ctas.append({"text": str(vp)[:60], "href": "#contato"})
+
+    photos = getattr(prd, "photos", None) or []
+    geo = getattr(prd, "geo", None)
+    if isinstance(geo, dict) and not any(geo.values()):
+        geo = None
+
+    # Build motion_directives from creative direction and animations
+    motion_soft = (creative_direction.get("soft_constraints") or {}).get("motion", {}) if isinstance(creative_direction, dict) else {}
+    motion_directives = {
+        "profile": motion_soft or {},
+        "animations": animations,
+        "parallax": bool(motion_soft.get("usa_parallax", True)) if isinstance(motion_soft, dict) else True,
+        "scroll_reveal": str((motion_soft or {}).get("efeito_principal", "")).lower() not in ("none", "sem motion"),
+        "hover_effects": True,
+        "aos": {
+            "enabled": True,
+            "attributes": {
+                "data-aos": "fade-up",
+            },
+            "stagger_delays": [100, 200, 300],
+        },
+        "hover_classes": "hover:scale-[1.02] hover:border-primary transition-all duration-300",
+        "scroll_smooth": True,
+    }
+
+    # Build builder_directive
+    archetype_slug_for_directive = getattr(prd, "design_system_slug", None) or "editorial-asymmetric"
+    archetype_briefing = _archetype_briefing(archetype_slug_for_directive)
+    builder_directive = f"Landing page para {prd.business_name} ({getattr(prd, 'segmento', '')}) em {getattr(prd, 'cidade', '')}. "
+    builder_directive += getattr(prd, "instrucao_criativa_para_dev", "") or ""
+    builder_directive += (
+        "\n\nDIRETRIZES OBRIGATÓRIAS DE HTML/CSS:\n"
+        f"{TAILWIND_FIRST_RULES.strip()}\n\n"
+        "REGRAS DE ESTRUTURA:\n"
+        "- Retorne HTML completo e válido.\n"
+        "- Use apenas 1 <main> raiz no documento.\n"
+        "- Use apenas 1 <h1> principal no hero.\n"
+        "- Seções subsequentes devem usar <section> e headings <h2>/<h3>.\n"
+        "- Não crie overlays absolutos sem wrapper relativo.\n\n"
+        "REGRAS DE ANIMAÇÃO:\n"
+        f"{ANIMATION_PRINCIPLES.strip()}\n\n"
+        "LAYOUT ANTI-COLISÃO:\n"
+        "- Todo grid de modalidades/diferenciais: class=\"w-full overflow-hidden grid grid-cols-1 md:grid-cols-3 gap-6\".\n"
+        "- Cards: sem width/height fixo em px; usar w-full + max-w + aspect-ratio.\n"
+        "- Nenhum position:absolute vaza do container; se usar, envolva em wrapper position:relative overflow-hidden.\n"
+        "- Texto não cruza borda — padding mínimo 1rem em todas as direções.\n"
+        "- Modalidades/diferenciais: bento-grid ou cards com foto de fundo + badge; nunca cards idênticos lado a lado.\n"
+        "- FAQ: acordeão com transição suave (details/summary animado), não lista plana.\n"
+        "\n"
+        "PROIBIÇÃO DE COLUNA ESMAGADA (F2):\n"
+        "- NUNCA use classes `min-w-[Npx]` (qualquer N) dentro de grids ou cards.\n"
+        "- Títulos de seção (h1, h2): SEMPRE `max-w-2xl w-full break-normal`.\n"
+        "  Proibido: `whitespace-nowrap`, `truncate` ou `overflow-hidden` em headings.\n"
+        "- Cards: `w-full` sem min-width fixo. Conteúdo quebra linha livremente.\n"
+        "\n"
+        "SHIELD DE CONTRASTE (F3):\n"
+        "- Se uma seção usa imagem de fundo com `brightness < 0.5` OU overlay escuro com opacidade > 50%, TODO texto visível (h1, h2, h3, p) DEVE ter `text-white` ou `color: #ffffff`.\n"
+        "- NUNCA use `color:var(--fg)` ou `text-[var(--foreground)]` sobre fundo escurecido.\n"
+        "- Overlay mínimo: gradient de 60% opacidade do --bg (light) ou 40% do --fg (dark) para garantir contraste > 4.5:1.\n"
+        "\n"
+        "CTA FINAL (F4):\n"
+        "- Container do CTA final: `w-full flex flex-col sm:flex-row items-center justify-center gap-4`.\n"
+        "- Nunca use `inline` ou `inline-flex` sem wrap em telas < 480px.\n"
+        "\n"
+        "PURGA DE SEÇÕES VAZIAS (F4):\n"
+        "- Seção com apenas título e menos de 30 caracteres de conteúdo visível: NÃO renderizar.\n"
+        "- Em vez de seção vazia, use um bloco de ‘Compromissos e Diferenciais’ com 3 bullets.\n"
+        "\n"
+        "DEPOIMENTOS (OBRIGATÓRIO):\n"
+        "- Use APENAS os reviews reais da lista `reviews_list` (autor + nota + texto).\n"
+        "- NÃO invente depoimentos, NÃO use placeholder como 'Cliente satisfeito'.\n"
+        "- Máximo 3 depoimentos, ordenados por nota (maior primeiro).\n"
+        "- Se `reviews_list` estiver vazia: renderizar bloco 'Compromissos e Diferenciais' com 3 bullets, NUNCA depoimentos inventados.\n"
+        "\n"
+        "MOTION:\n"
+        "- AOS: cada bloco animável recebe data-aos=\"fade-up\" e data-aos-delay incremental (100ms/200ms/300ms).\n"
+        "- Smooth scroll em links internos (#planos, #modalidades, #contato): scroll-behavior:smooth no html.\n"
+        "- Hover em cards: classes \"hover:scale-[1.02] hover:border-primary transition-all duration-300\".\n"
+        "- CTA buttons: hover:brightness-1.1 hover:shadow-lg com transição 200ms.\n"
+        "ARQUÉTIPO VISUAL ATIVO (OBRIGATÓRIO):\n"
+        f"- {archetype_briefing}\n"
+        f"- Fontes: heading={archetype_system.get('heading_font','Inter')}, "
+        f"body={archetype_system.get('body_font','Inter')}, "
+        f"border-radius={archetype_system.get('border_radius','8px')}.\n"
+        f"- Card style: {archetype_system.get('card_style','shadow-elevated')}.\n"
+        "FAQ NATIVO HTML5 (OBRIGATÓRIO):\n"
+        "- Cada pergunta do FAQ DEVE usar <details class=\"bg-[var(--surface)] border border-[var(--border)] "
+        'rounded-[var(--radius)] p-4\"> e <summary class=\"font-bold text-[var(--foreground)] cursor-pointer\">.\n'
+        "  Nunca use listas <ul>/<li> ou acordeão JavaScript puro para FAQ.\n"
+        "SHIELD DE TEXTO DECORATIVO (OBRIGATÓRIO):\n"
+        "- Qualquer texto decorativo de fundo (ex: \'FALE\', \'TREINE\', marca d\'\u00e1gua) "
+        'DEVE ter exatamente as classes: absolute -z-10 opacity-[0.03] select-none pointer-events-none.\n'
+        "- NUNCA posicione texto decorativo sobre dados de contato, CTA ou áreas de ação.\n"
+    )
+
+    spec = {
+        "business_name": prd.business_name,
+        "cidade": getattr(prd, "cidade", ""),
+        "segmento": getattr(prd, "segmento", ""),
+        "sections": sections,
+        "hero": hero,
+        "ctas": ctas,
+        "faqs": faqs,
+        "paleta": design_tokens.get("palette", {}),
+        "seo_keywords": getattr(prd, "seo_keywords", []) or [],
+        "motion_directives": motion_directives,
+        "color_palette": design_tokens.get("palette", {}),
+        "typography": getattr(prd, "typography", {}),
+        "animations": animations,
+        "design_tokens": design_tokens,
+        "layout_dna": layout_dna,
+        "design_system": design_system,
+        "builder_directive": builder_directive,
+        "reviews_count": getattr(prd, "reviews_count", 0),
+        "reviews_rating": getattr(prd, "reviews_rating", 0.0),
+        "reviews_list": reviews_list,
+        "address": getattr(prd, "address", ""),
+        "phone": getattr(prd, "phone", ""),
+        "hours": getattr(prd, "hours", None) or {},
+        "photos": photos,
+        "media_plan": media_plan,
+        "videos": getattr(prd, "videos", []),
+        "value_props": getattr(prd, "value_props", []) or [],
+        "geo": geo,
+        "dark_mode": getattr(prd, "dark_mode", False),
+        "google_maps_embed": getattr(prd, "google_maps_embed", ""),
+        "components_21dev": getattr(prd, "components_21dev", []),
+        "competitor_analysis": getattr(prd, "competitor_analysis", ""),
+        "anti_patterns": getattr(prd, "anti_patterns", []),
+        "schema_org_types": getattr(prd, "schema_org_types", []),
+        "layout_type": getattr(prd, "layout_type", ""),
+        "instrucao_criativa_para_dev": getattr(prd, "instrucao_criativa_para_dev", ""),
+        "site_build_plan": getattr(prd, "site_build_plan", {}) or {},
+        "requirements_contract": getattr(prd, "requirements_contract", {}) or {},
+        "visual_contract": getattr(prd, "visual_contract", {}) or {},
+        "visual_dna": getattr(prd, "visual_dna", {}) or {},
+        "layout_blueprint": getattr(prd, "layout_blueprint", []) or [],
+        "design_reference_pack": getattr(prd, "design_reference_pack", {}) or {},
+        "niche_brief": getattr(prd, "niche_brief", {}) or {},
+        "creative_direction": creative_direction,
+        "variation_blueprint": variation_blueprint,
+        "section_contracts": section_contracts,
+    }
+    spec["openui_payload"] = {
+        "business_context": {
+            "business_name": spec["business_name"],
+            "cidade": spec["cidade"],
+            "segmento": spec["segmento"],
+            "address": spec["address"],
+            "phone": spec["phone"],
+            "reviews_rating": spec["reviews_rating"],
+            "reviews_count": spec["reviews_count"],
+        },
+        "creative_direction": creative_direction,
+        "visual_dna": spec["visual_dna"],
+        "variation_blueprint": variation_blueprint,
+        "site_plan": spec["site_build_plan"],
+        "media_plan": media_plan,
+        "section_contracts": section_contracts,
+        "content": {
+            "sections": sections,
+            "faqs": spec["faqs"],
+            "seo_keywords": spec["seo_keywords"],
+            "reviews_list": spec["reviews_list"],
+            "value_props": spec["value_props"],
+        },
+        "technical_requirements": {
+            "html": "static Tailwind HTML",
+            "hard_constraints": (creative_direction or {}).get("hard_constraints", {}),
+            "anti_patterns": spec["anti_patterns"],
+            "narrative_framework": (variation_blueprint or {}).get("narrative_framework", "AIDA"),
+            "required_sections": (variation_blueprint or {}).get(
+                "required_sections",
+                ["hero", "interesse", "desejo", "acao", "faq", "footer"],
+            ),
+        },
+    }
+    # Instrumentação: logar chaves do spec enviado ao OpenUI
+    if _builder_logger:
+        _builder_logger.info(
+            "PRD_BUILDER: spec_keys=[{}]",
+            ", ".join(sorted(spec.keys())),
+        )
+    return spec
+
+
+def _archetype_briefing(archetype: str) -> str:
+    """Return archetype briefing text for OpenUI system prompt."""
+    briefings = {
+        "industrial-bold": "BOLD. Industrial aesthetic. Massive typography, dark backgrounds, sharp edges. Think brutalist luxury.",
+        "dark-futurist": "Futuristic dark mode. Neon accents, glass morphism, smooth gradients. Premium tech feel.",
+        "editorial-asymmetric": "Editorial asymmetric layout. Magazine-style grid, bold typography, generous whitespace. Premium content-first.",
+        "apple-minimalist": "Minimalist. Clean white space, subtle shadows, restrained palette. Apple-inspired simplicity.",
+        "organic-warm": "Warm organic. Earth tones, rounded shapes, natural textures. Approachable and trustworthy.",
+        "corporate-trust": "Corporate trust. Professional blue, structured grid, clear hierarchy. Enterprise credibility.",
+    }
+    return briefings.get(archetype, briefings["editorial-asymmetric"])
+
+
+def _extract_response_html(payload: dict) -> str:
+    """Normalize common OpenUI response formats to a single HTML string."""
+    if not isinstance(payload, dict):
+        return ""
+    html = (payload.get("html") or "").strip()
+    if html:
+        return html
+    for key in ("body_html", "body", "content", "markup"):
+        value = (payload.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _extract_body_only(html: str) -> str:
+    """Return only the contents of <body>...</body>, stripping document scaffolding."""
+    match = re.search(r"<body[^>]*>(.*?)</body>", html or "", flags=re.DOTALL | re.IGNORECASE)
+    fragment = match.group(1) if match else (html or "")
+    fragment = re.sub(r"(?is)<!DOCTYPE[^>]*>\s*", "", fragment)
+    fragment = re.sub(r"(?is)</?html[^>]*>", "", fragment)
+    # Remove <head>...</head> (or up to <body if closing tag is missing, e.g. partial fragments)
+    fragment = re.sub(r"(?is)<head\b[^>]*>.*?(?:</head\s*>|(?=<body\b))", "", fragment, flags=re.DOTALL)
+    fragment = re.sub(r"(?is)</?body[^>]*>", "", fragment)
+    return fragment.strip()
+
+
+def _inject_deterministic_assets(html: str, design_tokens: dict) -> str:
+    """Inject deterministic brand CSS tokens + AOS motion assets into <head> and before </body>.
+
+    Guarantees every final HTML has:
+      - <style id="brand-design-tokens"> with :root CSS vars derived from design_tokens
+      - AOS CSS <link> in <head>
+      - AOS JS <script> + auto-init before </body>
+    """
+    if not html or "<html" not in html.lower():
+        return html
+
+    # Flatten palette from design_tokens. CSS-var-named keys (e.g. "--bg") are target\n    # variable names, not color values. Strip the "--" prefix so _first("bg") finds the oklch value.\n    flat = dict(design_tokens or {})\n    for nested_key in ("palette", "color_palette"):\n        nested = flat.get(nested_key)\n        if isinstance(nested, dict):\n            for k, v in nested.items():\n                if k.startswith("--"):\n                    flat.setdefault(k[2:], v)\n                else:\n                    flat.setdefault(k, v)\n
+    def _first(*candidates):
+        for c in candidates:
+            v = flat.get(c)
+            if v:
+                return str(v)
+        return ""
+
+    primary   = _first("primary", "--primary", "accent", "--accent") or "#2563eb"
+    secondary = _first("secondary", "--secondary") or "#4b5563"
+    accent    = _first("accent", "--accent", "primary", "--primary") or primary
+    bg        = _first("background", "bg") or "#ffffff"
+    surface   = _first("surface", "--surface") or "#f9fafb"
+    text      = _first("text", "fg", "--fg") or "#111827"
+    border    = _first("border", "--border") or "#e5e7eb"
+    muted     = _first("muted", "--muted") or "#6b7280"
+
+    radius = _first("radius", "--radius", "border_radius") or "8px"
+    heading_font = _first("heading_font", "--font-heading") or "Inter"
+    body_font = _first("body_font", "--font-body") or "Inter"
+    # Emite vars SEM prefixo (:root) para o directive consumir com var(--bg)
+    # Mantem --brand-* como fallback para estilos legados.
+    brand_style = (
+        '<style id="design-tokens">'
+        f":root{{"
+        f"--bg:{bg};--surface:{surface};--foreground:{text};"
+        f"--muted:{muted};--primary:{primary};--primary-fg:{text};"
+        f"--border:{border};--radius:{radius};"
+        f"--font-heading:{heading_font};--font-body:{body_font};"
+        f"--brand-primary:{primary};--brand-secondary:{secondary};"
+        f"--brand-accent:{accent};--brand-bg:{bg};--brand-surface:{surface};"
+        f"--brand-text:{text};--brand-border:{border};--brand-muted:{muted};}}"
+        "</style>"
+    )
+    aos_head = '<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />'
+    aos_body = (
+        '<script src="https://unpkg.com/aos@next/dist/aos.js"></script>'
+        '<script>document.addEventListener("DOMContentLoaded",function(){'
+        "if(window.AOS){AOS.init({duration:700,once:true,offset:40});}"
+        "});</script>"
+    )
+    html = re.sub(r"(?is)(</head>)", f"{brand_style}\n{aos_head}\n\\1", html, count=1)
+    html = re.sub(r"(?is)(</body>)", f"{aos_body}\n\\1", html, count=1)
+    return html
+
+
+def _inject_sections_into_shell(shell_html: str, section_fragments: list[str]) -> str:
+
+    if not shell_html:
+        return ""
+    shell_html = shell_html.strip()
+    wrapped = []
+    for fragment in section_fragments:
+        frag = fragment.strip()
+        if not frag:
+            continue
+        frag = _sanitize_fragment(frag)
+        # Se o fragmento ja inicia com <section>, injeta as classes herméticas
+        # (evita <section><section>, preservando classes originais do fragmento)
+        if re.match(r"(?is)<section\b", frag):
+            frag = re.sub(
+                r'(?is)(<section\b[^>]*?\sclass=)(["\'])([^"\']*?)\2',
+                lambda m: (
+                    m.group(1) + m.group(2)
+                    + ((m.group(3).strip() + " w-full block clear-both relative overflow-hidden")).strip()
+                    + m.group(2)
+                ),
+                frag,
+                count=1,
+            )
+            # fallback: se nao tem atributo class, injeta direto
+            if ' class="' not in frag.lower() and " class='" not in frag.lower():
+                frag = re.sub(
+                    r'(?is)(<section\b)',
+                    r'\1 class="w-full block clear-both relative overflow-hidden"',
+                    frag,
+                    count=1,
+                )
+            wrapped.append(frag)
+            continue
+        # Extrai o nome da seção do primeiro <section id="..."> ou <section ...>
+        m = re.search(r'<section\b[^>]*\bid=["\']([^"\']+)["\']', frag, flags=re.IGNORECASE)
+        sec_id = m.group(1) if m else ""
+        wrapped.append(
+            f'<!-- SECTION START: {sec_id} -->\n'
+            f'<section id="{sec_id}" class="w-full block clear-both relative overflow-hidden">\n'
+            f'{frag}\n'
+            f'</section>\n'
+            f'<!-- SECTION END: {sec_id} -->'
+        )
+    body_content = "\n".join(wrapped).strip()
+    if not body_content:
+        return shell_html
+    if "<main" in shell_html.lower():
+        return re.sub(
+            r"(?is)(<main\b[^>]*>)(.*?)(</main>)",
+            lambda m: f"{m.group(1)}\n{body_content}\n{m.group(3)}",
+            shell_html,
+            count=1,
+        )
+    if "</body>" in shell_html.lower():
+        return re.sub(r"(?is)</body>", f"{body_content}\n</body>", shell_html, count=1)
+    return shell_html + "\n" + body_content
+
+
+def _google_fonts_href(typography: dict) -> str:
+    heading = _normalize_web_font_family(str((typography or {}).get("heading") or "Inter").strip(), "Inter")
+    body = _normalize_web_font_family(str((typography or {}).get("body") or "Inter").strip(), "Inter")
+    families: list[str] = []
+    for family in (heading, body):
+        if not family or family.lower() in {"system-ui", "sans-serif", "serif", "monospace"}:
+            continue
+        encoded = quote_plus(family)
+        if encoded.lower() == "inter":
+            encoded = "Inter:wght@400;500;600;700;800;900"
+        families.append(f"family={encoded}")
+    if not families:
+        families.append("family=Inter:wght@400;500;600;700;800;900")
+    return "https://fonts.googleapis.com/css2?" + "&".join(dict.fromkeys(families)) + "&display=swap"
+
+
+_FONT_FAMILY_ALIASES = {
+    "ubermove": "Archivo Black",
+    "ubermovetext": "Inter",
+    "uber move": "Archivo Black",
+    "uber move text": "Inter",
+    "nouvelr": "Oswald",
+}
+
+
+def _normalize_web_font_family(family: str, fallback: str) -> str:
+    raw = str(family or "").strip()
+    if not raw:
+        return fallback
+    normalized = re.sub(r"[^a-z0-9]+", "", raw.lower())
+    return _FONT_FAMILY_ALIASES.get(normalized, raw)
+
+
+def _ensure_shell_fonts(html: str, spec: dict) -> str:
+    if not html:
+        return html
+    href = _google_fonts_href(spec.get("typography") or {})
+    font_links = (
+        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        f'<link href="{href}" rel="stylesheet">'
+    )
+    cleaned = re.sub(
+        r'(?is)<link\b[^>]*href=["\']https://fonts\.googleapis\.com/[^"\']+["\'][^>]*>\s*',
+        "",
+        html,
+    )
+    return re.sub(r"(?is)</head>", font_links + "\n</head>", cleaned, count=1)
+
+
+def _render_block(block_spec: dict, design_tokens: dict) -> tuple[str, str]:
+    """Render one block via OpenUI with up to 3 retries. Returns (html, model) tuple or ("", "") on failure."""
+    max_retries = 3
+    retry_delays = [5, 15, 30]
+    labels = block_spec.get("_bloco_labels", [])
+    label_str = ", ".join(labels)
+    block_spec = dict(block_spec)
+    render_hint = block_spec.get("_render_hint") or "body_only"
+    block_spec["_render_hint"] = render_hint
+
+    last_error = ""
+    for attempt in range(max_retries):
+        try:
+            if last_error:
+                block_spec["_repair_feedback"] = (
+                    f"Tentativa anterior inválida para [{label_str}]: {last_error}. "
+                    "Regere somente a seção solicitada, começando com <section e terminando com </section>, "
+                    "com heading e texto visível suficientes."
+                )
+            resp = requests.post(
+                GENERATE_ENDPOINT,
+                json={"designerPRD": block_spec},
+                headers={"Content-Type": "application/json"},
+                timeout=60,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                html = data.get("html", "")
+                model = data.get("model", "")
+                if render_hint == "section_fragment":
+                    html = _extract_body_only(html)
+                    valid_html = len(html.strip()) >= 200 and "<section" in html.lower()
+                    reason = "" if valid_html else "resposta 200 sem section utilizavel"
+                else:
+                    valid_html, reason = _looks_like_valid_body_fragment(html)
+                if (
+                    not valid_html
+                    and render_hint == "section_fragment"
+                    and len(html or "") >= 1200
+                ):
+                    fallback_body = _extract_body_only(html)
+                    fallback_lower = fallback_body.lower()
+                    if (
+                        len(fallback_body.strip()) >= 400
+                        and any(tag in fallback_lower for tag in ("<section", "<div", "<article", "<main"))
+                        and any(tag in fallback_lower for tag in ("<h1", "<h2", "<h3", "<p", "<a", "<button"))
+                    ):
+                        valid_html = True
+                        reason = ""
+                if valid_html:
+                    try:
+                        if write_html_artifact:
+                            primary_label = _artifact_slug(labels[0] if labels else render_hint)
+                            write_html_artifact(
+                                run_id=str(block_spec.get("_run_id") or "no-run"),
+                                lead_id=str(block_spec.get("_lead_id") or "no-lead"),
+                                lead_name=str(block_spec.get("_lead_name") or ""),
+                                filename=(
+                                    f"builder/section_fragments/"
+                                    f"{(block_spec.get('_section_index') or 0):02d}-{primary_label}.html"
+                                ),
+                                html=html,
+                                metadata={
+                                    "step": "openui_block",
+                                    "render_hint": render_hint,
+                                    "labels": labels,
+                                    "model": model,
+                                    "section_index": block_spec.get("_section_index"),
+                                },
+                            )
+                    except Exception as exc:
+                        if _builder_logger:
+                            _builder_logger.warning("[builder] artifact openui bloco falhou block={} err={}", label_str, exc)
+                    if _builder_logger:
+                        _builder_logger.info("[builder] Bloco [{}] OK bytes={} render_hint={}", label_str, len(html), render_hint)
+                    return html, model
+                last_error = f"HTML invalido: {reason} ({len(html)} chars)"
+                if _builder_logger:
+                    _builder_logger.warning(
+                        "[builder] Bloco [{}] rejeitado render_hint={} tentativa={}/{} causa={}",
+                        label_str, render_hint, attempt + 1, max_retries, last_error,
+                    )
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delays[attempt])
+                    continue
+            elif resp.status_code in (529, 503) or (
+                resp.status_code == 500
+                and any(marker in resp.text.lower() for marker in ("529", "overloaded", "sobrecarregado", "503", "provider_error"))
+            ):
+                last_error = f"OpenUI overloaded attempt {attempt + 1}: HTTP {resp.status_code}"
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delays[attempt])
+                    continue
+            else:
+                last_error = f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
+                return "", ""
+        except requests.exceptions.Timeout:
+            last_error = f"OpenUI HTTP {resp.status_code} attempt {attempt + 1}"
+            if attempt < max_retries - 1:
+                time.sleep(retry_delays[attempt])
+                continue
+            return "", ""
+        except Exception as e:
+            last_error = f"OpenUI error: {str(e)}"
+            return "", ""
+
+    if _builder_logger:
+        _builder_logger.error("[builder] Bloco [{}] falhou apos {} tentativas causa={}", label_str, max_retries, last_error)
+    return "", ""
+
+
+def _render_shell_document(spec: dict) -> tuple[str, str, str]:
+    request_spec = dict(spec)
+    request_spec["_render_hint"] = "shell_document"
+    try:
+        resp = requests.post(
+            GENERATE_ENDPOINT,
+            json={"designerPRD": request_spec},
+            headers={"Content-Type": "application/json"},
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            return "", "", f"OpenUI HTTP {resp.status_code}: {resp.text[:200]}"
+        data = resp.json()
+        html = _extract_response_html(data)
+        if not html:
+            return "", "", "shell vazio"
+        html = _ensure_shell_fonts(html, spec)
+        lower = html.lower()
+        if "<html" not in lower or "<body" not in lower or "<main" not in lower:
+            return "", data.get("model", ""), "shell sem html/body/main"
+        try:
+            if write_html_artifact:
+                write_html_artifact(
+                    run_id=str(spec.get("_run_id") or "no-run"),
+                    lead_id=str(spec.get("_lead_id") or "no-lead"),
+                    lead_name=str(spec.get("_lead_name") or ""),
+                    filename="builder/shell/00-shell-document.html",
+                    html=html,
+                    metadata={
+                        "step": "openui_shell",
+                        "render_hint": "shell_document",
+                        "model": data.get("model", ""),
+                    },
+                )
+        except Exception as exc:
+            if _builder_logger:
+                _builder_logger.warning("[builder] artifact openui shell falhou err={}", exc)
+        return html, data.get("model", ""), ""
+    except Exception as exc:
+        return "", "", f"shell error: {exc}"
+
+
+def _render_section_blocks(spec: dict) -> tuple[list[str], str, str]:
+    """Render each section from spec['sections'] individually via OpenUI.
+
+    Falls back to _SECTION_BLOCKS grouping only when spec['sections'] is empty
+    (preserves legacy behavior for old callers that don't populate sections).
+    """
+    partials: list[str] = []
+    last_model = ""
+    section_index = 0
+
+    # Prefer sections defined in the spec (dynamic PRD-driven)
+    sections = spec.get("sections") or []
+    if not sections:
+        # Legacy fallback: group by _SECTION_BLOCKS
+        section_map = {str(s.get("name", "")).lower(): s for s in []}
+        for group in _SECTION_BLOCKS:
+            selected = [section_map[name] for name in group if name in section_map]
+            if not selected:
+                continue
+            section_index += 1
+            block_spec = dict(spec)
+            block_spec["sections"] = selected
+            block_spec["_bloco_labels"] = group
+            block_spec["_render_hint"] = "section_fragment"
+            block_spec["_section_index"] = section_index
+            html, model = _render_block(block_spec, spec.get("design_tokens", {}))
+            if not html:
+                return [], last_model, f"Falha ao gerar bloco [{', '.join(group)}]"
+            partials.append(html)
+            last_model = model or last_model
+        if not partials:
+            return [], last_model, "nenhum fragmento gerado"
+        return partials, last_model, ""
+
+    # Ordenar secoes pela ordem do variation_blueprint (quando disponivel)
+    order_index_map = {}
+    try:
+        _vb = spec.get("variation_blueprint") or {}
+        _order = _vb.get("ordem_das_secoes") or []
+        order_index_map = {str(n).strip().lower(): i for i, n in enumerate(_order) if str(n).strip()}
+    except Exception:
+        pass
+    if order_index_map:
+        sections = sorted(
+            sections,
+            key=lambda s: order_index_map.get(str(s.get("name", "")).strip().lower(), 9999),
+        )
+    # Dynamic: one OpenUI call per section
+    for s in sections:
+        if not isinstance(s, dict):
+            continue
+        section_index += 1
+        block_spec = dict(spec)
+        block_spec["sections"] = [s]
+        block_spec["_bloco_labels"] = [s.get("name", f"section-{section_index}")]
+        block_spec["_render_hint"] = "section_fragment"
+        block_spec["_section_index"] = section_index
+        html, model = _render_block(block_spec, spec.get("design_tokens", {}))
+        if not html or len(re.sub(r"<[^>]+>", "", html).strip()) < 30:
+            _builder_logger.warning("[builder] pulando secao vazia/invalida: {}", s.get("name"))
+            continue
+        partials.append(html)
+        last_model = model or last_model
+
+    if not partials:
+        return [], last_model, "nenhum fragmento gerado"
+    return partials, last_model, ""
+
+
+def _render_full_site(spec: dict) -> tuple[str, str, str]:
+    """Controlled multi-call flow: shell first, then short section fragments."""
+    shell_html, shell_model, shell_error = _render_shell_document(spec)
+    if not shell_html:
+        return "", shell_model, shell_error or "falha no shell"
+
+    partials, last_model, partial_error = _render_section_blocks(spec)
+    if not partials:
+        return "", last_model or shell_model, partial_error or "falha nos fragmentos"
+
+    final_html = _inject_sections_into_shell(shell_html, partials)
+    if _has_unbalanced_tags(final_html):
+        final_html = _sanitize_fragment(final_html)
+    valid_html, reason = _looks_like_valid_body_fragment(final_html)
+    if not valid_html:
+        return "", last_model or shell_model, f"HTML final invalido: {reason} ({len(final_html)} chars)"
+    final_html = _inject_deterministic_assets(final_html, spec.get("design_tokens", {}))
+    if _builder_logger:
+        _builder_logger.info("[builder] Multi-call OpenUI OK bytes={}", len(final_html))
+    return final_html, last_model or shell_model, ""
+
+
+def render_site(prd, usar_llm: bool = True) -> BuildResult:
+    """
+    Generate HTML site from DesignerPRD via OpenUI block-by-block generation.
+
+    Splits the spec into 4 partial blocks (hero+sobre, servicos+depoimentos,
+    faq+localizacao, contato), renders each via separate OpenUI call, then
+    concatenates into one final HTML document.
+
+    Args:
+        prd: DesignerPRD object with all design specifications.
+        usar_llm: If True, use LLM generation. If False, use template fallback.
+
+    Returns:
+        BuildResult with html, model, and success status.
+    """
+    if not usar_llm:
+        return BuildResult(html="", model="", success=False, error="Template fallback not implemented")
+
+    # Ensure OpenUI is ready
+    if not _wait_for_openui(max_wait=10):
+        return BuildResult(html="", model="", success=False, error="OpenUI service not available at " + OPENUI_URL)
+
+    # Convert PRD to spec
+    spec = _prd_to_spec(prd)
+    spec["_run_id"] = getattr(prd, "_run_id", "") or ""
+    spec["_lead_id"] = getattr(prd, "_lead_id", "") or ""
+    _lead_data = getattr(prd, "_lead_data", None) or {}
+    spec["_lead_name"] = _lead_data.get("nome", "") if isinstance(_lead_data, dict) else ""
+    try:
+        _write_builder_spec_artifacts(spec)
+    except Exception as exc:
+        if _builder_logger:
+            _builder_logger.warning("[builder] artifact spec falhou err={}", exc)
+
+    final_html, final_model, error = _render_full_site(spec)
+    if not final_html:
+        return BuildResult(
+            html="",
+            model=final_model,
+            success=False,
+            error=error or "Falha ao gerar HTML single-shot no OpenUI",
+        )
+
+    try:
+        if write_html_artifact:
+            write_html_artifact(
+                run_id=spec["_run_id"],
+                lead_id=spec["_lead_id"],
+                lead_name=spec["_lead_name"],
+                filename="builder/final_html/99-final-document.html",
+                html=final_html,
+                metadata={
+                    "step": "builder",
+                    "artifact_type": "final_document",
+                    "model": final_model,
+                },
+            )
+        from backend.agents.llm_direct import _registrar_uso_completo
+        _registrar_uso_completo(
+            model_id=final_model or "openui-unknown",
+            input_tokens=0,
+            output_tokens=len(final_html) // 4,
+            agent_name="builder_openui_single_shot",
+            provider="openui",
+        )
+    except Exception as e:
+        if _builder_logger:
+            _builder_logger.warning("[builder] tracking falhou single-shot err={}", e)
+
+    return BuildResult(html=final_html, model=final_model, success=True)
