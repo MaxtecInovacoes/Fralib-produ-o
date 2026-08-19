@@ -91,7 +91,7 @@ def flush() -> None:
     t = get_tracer()
     if t:
         try:
-            t.flush_sync()
+            t.flush()
         except Exception:
             pass
 
