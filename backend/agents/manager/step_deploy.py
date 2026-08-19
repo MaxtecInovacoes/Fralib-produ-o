@@ -472,10 +472,7 @@ def step_deploy(state: PipelineState) -> PipelineState:
             slug = "site"
 
         # Diretorio: sites/<tenant_id>/<slug>-<lead_id>/
-        # No VPS (Linux Docker) o nginx serve /var/www/fralib/sites/.
-        # No Windows local, usa diretorio relativo "sites".
-        _default_sites = "/var/www/fralib/sites" if os.name == "posix" else "sites"
-        sites_root = Path(os.getenv("FRALIB_SITES_ROOT", _default_sites))
+        sites_root = Path(os.getenv("FRALIB_SITES_ROOT", "sites"))
         site_dir = sites_root / str(state.tenant_id) / f"{slug}-{state.lead_id[:8]}"
         site_dir.mkdir(parents=True, exist_ok=True)
 
