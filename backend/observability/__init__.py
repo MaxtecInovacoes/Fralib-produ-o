@@ -68,6 +68,25 @@ class Trace:
             self._current = _Span("fallback", "worker", "")
         return self._current
 
+    def _agregar_metricas(self) -> None:
+        """Agrega métricas totais a partir dos spans.
+
+        O worker chama este método APÓS popular os spans de LLM
+        (linha ~336 do worker.py). Como o stub não tem acesso ao
+        token tracker direto, agrega o que já está nos spans.
+        """
+        in_tok = sum(getattr(s, "input_tokens", 0) or 0 for s in self._spans)
+        out_tok = sum(getattr(s, "output_tokens", 0) or 0 for s in self._spans)
+        cache_hit = sum(getattr(s, "cache_hit_tokens", 0) or 0 for s in self._spans)
+        custo = sum(getattr(s, "custo_usd", 0.0) or 0.0 for s in self._spans)
+        self.total_input_tokens = in_tok
+        self.total_output_tokens = out_tok
+        self.total_cache_hit = cache_hit
+        self.custo_total_usd = round(custo, 6)
+        self.total_chamadas_llm = sum(
+            1 for s in self._spans if getattr(s, "nome", "").startswith("llm_")
+        )
+
 
 # ── Persistência ──────────────────────────────────────
 
