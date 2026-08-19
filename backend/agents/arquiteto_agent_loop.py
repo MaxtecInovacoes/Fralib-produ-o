@@ -705,11 +705,12 @@ def gerar_arquiteto_mestre_prd_agent(
     caio_score: int = 0,
     caio_motivo: str = "",
     briefing_theo: str = "",
-    dark_mode: bool = False,
-    keyword_research: str = "",
     niche_brief: dict | None = None,
     creative_direction: dict | None = None,
     variation_blueprint: dict | None = None,
+    dark_mode: bool = False,
+    keyword_research: str = "",
+    **kwargs: object,
 ) -> DesignerPRD:
     """
     Drop-in replacement para gerar_arquiteto_mestre_prd usando Managed Agent.
