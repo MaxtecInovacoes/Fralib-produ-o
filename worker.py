@@ -10,6 +10,7 @@ import re
 import signal
 import time
 
+from backend.core import job_queue
 from backend.core.database import inicializar_database
 from backend.core.db_imports import text  # noqa: F401
 
