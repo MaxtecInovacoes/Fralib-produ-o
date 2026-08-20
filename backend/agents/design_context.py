@@ -513,8 +513,8 @@ def get_design_context(segmento: str, nome_negocio: str = "", tier: str = "STAND
     _sub_nicho_data = None
     if dados_lead:
         _sub_nicho_data = detectar_sub_nicho(seg, dados_lead)
-        if _sub_nicho_data and _sub_nicho_data.get("vibe_override"):
-            dir_key = _sub_nicho_data["vibe_override"]
+        # sub-nicho NÃO muda dir_key — apenas retorna tom/cta/publico/vibe_metadata
+        # A direção visual é soberana do archetype/tier, não do sub-nicho.
 
     if dir_key not in DIRECOES_VISUAIS:
         dir_key = nicho["dir"]

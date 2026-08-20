@@ -233,6 +233,13 @@ ARCHETYPE_MEDIA_MODIFIERS = {
     "LUXURY_ELITE": "luxury minimal dramatic light refined texture editorial photography",
 }
 
+SECTION_QUERY_MODIFIERS = {
+    "hero_photo": "hero background wide angle dramatic lighting",
+    "modalities_photos": "service equipment detail clean",
+    "space_photo": "interior facility environment spacious bright",
+    "coach_photos": "portrait professional headshot person",
+}
+
 
 def _get_query_base(segmento: str) -> str:
     seg = segmento.lower().strip().replace("-", "_").replace(" ", "_")
@@ -267,14 +274,16 @@ def _get_city_modifier(cidade: str) -> str:
     return ""
 
 
-def _build_query(segmento: str, cidade: str = "", nome: str = "", archetype: str = "") -> str:
+def _build_query(segmento: str, cidade: str = "", nome: str = "", archetype: str = "", secao: str = "") -> str:
     """Monta query enriquecida com contexto do negócio para fotos únicas."""
     query_key = _infer_query_key(segmento, nome)
     base = _get_query_base(query_key)
     city_mod = _get_city_modifier(cidade)
     mood_mod = ARCHETYPE_MEDIA_MODIFIERS.get((archetype or "").upper(), "")
-    # Combinar base + modificador de cidade para diversidade geográfica
+    section_mod = SECTION_QUERY_MODIFIERS.get(secao or "", "")
     parts = [base]
+    if section_mod:
+        parts.append(section_mod)
     if mood_mod:
         parts.append(mood_mod)
     if city_mod:
@@ -447,6 +456,81 @@ def buscar_fotos_unsplash(
 
     except Exception as e:
         print(f"[Unsplash] Erro API: {e}. Usando fallback.")
+        return _fallback_urls(query, quantidade, nome, segmento)
+
+
+def buscar_fotos_por_secao(
+    segmento: str,
+    secao: str,
+    quantidade: int = 4,
+    nome: str = "",
+    cidade: str = "",
+    archetype: str = "",
+) -> list:
+    """
+    Busca fotos do Unsplash com query semântica por seção.
+
+    Seção esperada: hero_photo, modalities_photos, space_photo, coach_photos.
+    Adiciona modificador semântico específico da seção à query base.
+    """
+    secao_normalizada = secao.lower().strip().replace("-", "_").replace(" ", "_")
+    query = _build_query(segmento, cidade, nome, archetype, secao=secao_normalizada)
+    ck = _cache_key(segmento, nome, cidade, query)
+    cache_file = os.path.join(CACHE_DIR, f"unsplash_{ck}.json")
+
+    if os.path.exists(cache_file) and (time.time() - os.path.getmtime(cache_file)) < CACHE_TTL:
+        try:
+            with open(cache_file) as f:
+                pool = json.load(f)
+            selected = _select_unique(pool, nome or segmento, quantidade)
+            print(
+                f"[Unsplash][section={secao_normalizada}] Cache HIT: {len(selected)}/{len(pool)} fotos"
+            )
+            return selected
+        except Exception:
+            pass
+
+    if not UNSPLASH_ACCESS_KEY:
+        print(f"[Unsplash][section={secao_normalizada}] Sem API key. Usando fallback.")
+        return _fallback_urls(query, quantidade, nome, segmento)
+
+    try:
+        resp = requests.get(
+            "https://api.unsplash.com/search/photos",
+            params={
+                "query": query,
+                "per_page": min(quantidade + 4, 12),
+                "orientation": "landscape" if secao_normalizada != "coach_photos" else "portrait",
+                "content_filter": "high",
+                "order_by": "relevant",
+            },
+            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        pool = []
+        for photo in resp.json().get("results", []):
+            url = photo["urls"]["regular"]
+            if url not in pool:
+                pool.append(url)
+
+        if not pool:
+            print(f"[Unsplash][section={secao_normalizada}] Sem resultados. Fallback.")
+            return _fallback_urls(query, quantidade, nome, segmento)
+
+        try:
+            with open(cache_file, "w") as f:
+                json.dump(pool, f)
+        except Exception:
+            pass
+
+        selected = _select_unique(pool, nome or segmento, quantidade)
+        print(
+            f"[Unsplash][section={secao_normalizada}] OK: {len(selected)}/{len(pool)} fotos"
+        )
+        return selected
+    except Exception as e:
+        print(f"[Unsplash][section={secao_normalizada}] Erro API: {e}. Fallback.")
         return _fallback_urls(query, quantidade, nome, segmento)
 
 
